@@ -1,0 +1,19 @@
+{
+  "name": "vesi",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "engines": {
+    "node": ">=20.11.1"
+  },
+  "main": "index.js",
+  "scripts": {
+    "dev": "npx browser-sync start --server"
+  },
+  "devDependencies": {
+    "@rollup/plugin-replace": "^5.0.5",
+    "browser-sync": "^3.0.2",
+    "dat.gui": "^0.7.9",
+    "rollup": "^4.13.0"
+  }
+}
