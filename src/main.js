@@ -12,9 +12,10 @@ const AUDIO = true;
 const DEBUG = true;
 
 let device;
-let uniformBuffer;
-let uniformBindGroup;
-// let computePipeline;
+let storageBuffer;
+let vertexBuffer;
+let staticStorageBuffer;
+let bindGroup;
 let renderPipeline;
 let renderPassDescriptor;
 let context;
@@ -22,6 +23,20 @@ let audioCtx;
 let analyser;
 let fftDataArray;
 let shaderCode;
+
+// let computePipeline;
+
+let particles = [];
+const particleCount = 100;
+
+const storageUnitSize =
+  3 * 4 + // position, 3 x f32
+  1 * 4; // pressure, 1 x f32
+const storageBufferSize = storageUnitSize * particleCount;
+const storageValues = new Float32Array(storageBufferSize / 4);
+
+const positionOffset = 0;
+const pressureOffset = 3;
 
 const state = {
   halt: false,
@@ -78,12 +93,43 @@ document.addEventListener(
   true
 );
 
-async function createRenderPipeline(shaderModule, pipelineLayout) {
+// A random number between [min and max)
+// With 1 argument it will be [0 to min)
+// With no arguments it will be [0 to 1)
+const rand = (min, max) => {
+  if (min === undefined) {
+    min = 0;
+    max = 1;
+  } else if (max === undefined) {
+    max = min;
+    min = 0;
+  }
+  return min + Math.random() * (max - min);
+};
+
+async function createRenderPipeline(shaderModule) {
   return device.createRenderPipelineAsync({
-    layout: pipelineLayout,
+    layout: "auto",
     vertex: {
       module: shaderModule,
       entryPoint: "vs",
+      buffers: [
+        {
+          arrayStride: (3 + 2) * 4, // xyz, uv
+          attributes: [
+            {
+              shaderLocation: 0,
+              offset: 0,
+              format: "float32x3",
+            },
+            {
+              shaderLocation: 1,
+              offset: 3 * 4,
+              format: "float32x2",
+            },
+          ],
+        },
+      ],
     },
     fragment: {
       module: shaderModule,
@@ -98,64 +144,67 @@ function encodeRenderPassAndSubmit(
   commandEncoder,
   pipeline,
   bindGroup,
-  passDescriptor
+  passDescriptor,
+  vertexBuffer
 ) {
   const passEncoder = commandEncoder.beginRenderPass(passDescriptor);
   passEncoder.setPipeline(pipeline);
   passEncoder.setBindGroup(0, bindGroup);
-  passEncoder.draw(4);
+
+  passEncoder.setVertexBuffer(0, vertexBuffer);
+
+  // Draw a quad
+  passEncoder.draw(6, particleCount);
   passEncoder.end();
 }
 
 async function createRenderResources() {
-  const bindGroupLayout = device.createBindGroupLayout({
-    entries: [
-      {
-        binding: 0,
-        visibility: GPUShaderStage.FRAGMENT,
-        buffer: {
-          type: "uniform",
-        },
-      },
-    ],
+  // prettier-ignore
+  const quadVerticesWithUV = new Float32Array([
+    -0.01, -0.01, 0.0,  0.0, 0.0, // Bottom left
+     0.01, -0.01, 0.0,  1.0, 0.0, // Bottom right
+    -0.01,  0.01, 0.0,  0.0, 1.0, // Top left
+    //
+     0.01, -0.01, 0.0,  1.0, 0.0, // Bottom right
+     0.01,  0.01, 0.0,  1.0, 1.0, // Top right
+    -0.01,  0.01, 0.0,  0.0, 1.0  // Top left
+]);
+  vertexBuffer = device.createBuffer({
+    size: quadVerticesWithUV.byteLength,
+    usage: GPUBufferUsage.VERTEX,
+    mappedAtCreation: true,
+  });
+  new Float32Array(vertexBuffer.getMappedRange()).set(quadVerticesWithUV);
+  vertexBuffer.unmap();
+
+  storageBuffer = device.createBuffer({
+    size: storageBufferSize,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
 
-  uniformBuffer = device.createBuffer({
-    size: (4 + 4 + 4 + 4) * Float32Array.BYTES_PER_ELEMENT,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
+  const shaderModule = device.createShaderModule({ code: shaderCode });
+  // computePipeline = await createComputePipeline(shaderModule, pipelineLayout);
+  renderPipeline = await createRenderPipeline(shaderModule);
 
-  uniformBindGroup = device.createBindGroup({
-    layout: bindGroupLayout,
-    entries: [
-      {
-        binding: 0,
-        resource: {
-          buffer: uniformBuffer,
-        },
-      },
-    ],
-  });
-
-  const pipelineLayout = device.createPipelineLayout({
-    bindGroupLayouts: [bindGroupLayout],
+  bindGroup = device.createBindGroup({
+    label: "bind group for objects",
+    layout: renderPipeline.getBindGroupLayout(0),
+    entries: [{ binding: 0, resource: { buffer: storageBuffer } }],
   });
 
   renderPassDescriptor = {
+    label: "our basic canvas renderPass",
     colorAttachments: [
       {
+        clearValue: [0.3, 0.3, 0.3, 1],
         loadOp: "clear",
         storeOp: "store",
       },
     ],
   };
-
-  const shaderModule = device.createShaderModule({ code: shaderCode });
-  // computePipeline = await createComputePipeline(shaderModule, pipelineLayout);
-  renderPipeline = await createRenderPipeline(shaderModule, pipelineLayout);
 }
 
-function render(time) {
+function render() {
   state.now = performance.now() - state.epoch;
   const dt = (state.now - state.lastRenderTime) / 1000;
   state.lastRenderTime = state.now;
@@ -176,14 +225,24 @@ function render(time) {
   //   );
 
   // Uniforms
-  // prettier-ignore
-  const uniformsArray = new Float32Array([
-    canvas.width,           canvas.height,          0.0,                    0.0,
-    state.sun.x,            state.sun.y,            state.sun.z,            0.0,
-    state.camera.pos.x,     state.camera.pos.y,     state.camera.pos.z,     0.0,
-    state.camera.target.x,  state.camera.target.y,  state.camera.target.z,  0.0
-  ]);
-  device.queue.writeBuffer(uniformBuffer, 0, uniformsArray.buffer);
+  // const uniformsArray = new Float32Array([
+  //   canvas.width,           canvas.height,          0.0,                    0.0,
+  //   state.sun.x,            state.sun.y,            state.sun.z,            0.0,
+  //   state.camera.pos.x,     state.camera.pos.y,     state.camera.pos.z,     0.0,
+  //   state.camera.target.x,  state.camera.target.y,  state.camera.target.z,  0.0
+  // ]);
+  // device.queue.writeBuffer(uniformBuffer, 0, uniformsArray.buffer);
+
+  for (let i = 0; i < particleCount; ++i) {
+    const offset = i * (storageUnitSize / 4);
+    storageValues.set(
+      [rand(-1, 1), rand(-1, 1), rand(-1, 1)],
+      offset + positionOffset
+    );
+    storageValues.set([rand()], offset + pressureOffset);
+  }
+
+  device.queue.writeBuffer(storageBuffer, 0, storageValues);
 
   // Render
   renderPassDescriptor.colorAttachments[0].view = context
@@ -193,8 +252,9 @@ function render(time) {
   encodeRenderPassAndSubmit(
     commandEncoder,
     renderPipeline,
-    uniformBindGroup,
-    renderPassDescriptor
+    bindGroup,
+    renderPassDescriptor,
+    vertexBuffer
   );
 
   device.queue.submit([commandEncoder.finish()]);
