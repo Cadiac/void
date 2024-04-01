@@ -14,7 +14,6 @@ const DEBUG = true;
 let device;
 let storageBuffer;
 let vertexBuffer;
-let staticStorageBuffer;
 let bindGroup;
 let renderPipeline;
 let renderPassDescriptor;
@@ -24,19 +23,30 @@ let analyser;
 let fftDataArray;
 let shaderCode;
 
-// let computePipeline;
+const rand = (min, max) => {
+  if (min === undefined) {
+    min = 0;
+    max = 1;
+  } else if (max === undefined) {
+    max = min;
+    min = 0;
+  }
+  return min + Math.random() * (max - min);
+};
 
-let particles = [];
 const particleCount = 100;
 
 const storageUnitSize =
   3 * 4 + // position, 3 x f32
-  1 * 4; // pressure, 1 x f32
+  1 * 4 + // density, 1 x f32,
+  1 * 4; // pressure, 1 x f32,
+
 const storageBufferSize = storageUnitSize * particleCount;
 const storageValues = new Float32Array(storageBufferSize / 4);
 
 const positionOffset = 0;
-const pressureOffset = 3;
+const densityOffset = positionOffset + 3;
+const pressureOffset = densityOffset + 1;
 
 const state = {
   halt: false,
@@ -44,33 +54,19 @@ const state = {
   now: 0,
   dt: 0,
   lastRenderTime: 0,
-  camera: {
-    pos: {
-      x: 0,
-      y: 0,
-      z: -5,
-    },
-    target: {
-      x: 0,
-      y: 0,
-      z: 0,
-    },
-  },
-  sun: {
-    x: 0,
-    y: 5,
-    z: 100,
-  },
-  fog: {
-    color: [255, 127, 255],
-    intensity: 0.005,
-  },
-  sky: {
-    color: [255, 255, 255],
-  },
   audio: {
     offset: 22,
     beat: 0,
+  },
+  particles: {
+    smoothingRadius: 0.2,
+    positions: [...Array(particleCount)].map((_) => ({
+      x: rand(-0.5, 0.5),
+      y: rand(-0.5, 0.5),
+      z: 0,
+    })),
+    densities: [...Array(particleCount)].map((_) => 0),
+    pressures: [...Array(particleCount)].map((_) => 0),
   },
 };
 
@@ -93,19 +89,28 @@ document.addEventListener(
   true
 );
 
-// A random number between [min and max)
-// With 1 argument it will be [0 to min)
-// With no arguments it will be [0 to 1)
-const rand = (min, max) => {
-  if (min === undefined) {
-    min = 0;
-    max = 1;
-  } else if (max === undefined) {
-    max = min;
-    min = 0;
+function smoothingKernel(radius, distance) {
+  const volume = (Math.PI * Math.pow(radius, 8)) / 4;
+  const value = Math.max(0, radius * radius - distance * distance);
+  return (value * value * value) / volume;
+}
+
+function calculateDensity(samplePoint, positions, smoothingRadius) {
+  let density = 0;
+  const mass = 1;
+
+  for (const position of positions) {
+    const distance = Math.hypot(
+      position.x - samplePoint.x,
+      position.y - samplePoint.y,
+      position.z - samplePoint.z
+    );
+    const influence = smoothingKernel(smoothingRadius, distance);
+    density += mass * influence;
   }
-  return min + Math.random() * (max - min);
-};
+
+  return density;
+}
 
 async function createRenderPipeline(shaderModule) {
   return device.createRenderPipelineAsync({
@@ -150,10 +155,7 @@ function encodeRenderPassAndSubmit(
   const passEncoder = commandEncoder.beginRenderPass(passDescriptor);
   passEncoder.setPipeline(pipeline);
   passEncoder.setBindGroup(0, bindGroup);
-
   passEncoder.setVertexBuffer(0, vertexBuffer);
-
-  // Draw a quad
   passEncoder.draw(6, particleCount);
   passEncoder.end();
 }
@@ -161,13 +163,13 @@ function encodeRenderPassAndSubmit(
 async function createRenderResources() {
   // prettier-ignore
   const quadVerticesWithUV = new Float32Array([
-    -0.01, -0.01, 0.0,  0.0, 0.0, // Bottom left
-     0.01, -0.01, 0.0,  1.0, 0.0, // Bottom right
-    -0.01,  0.01, 0.0,  0.0, 1.0, // Top left
+    -0.1, -0.1, 0.0,  0.0, 0.0, // Bottom left
+     0.1, -0.1, 0.0,  1.0, 0.0, // Bottom right
+    -0.1,  0.1, 0.0,  0.0, 1.0, // Top left
     //
-     0.01, -0.01, 0.0,  1.0, 0.0, // Bottom right
-     0.01,  0.01, 0.0,  1.0, 1.0, // Top right
-    -0.01,  0.01, 0.0,  0.0, 1.0  // Top left
+     0.1, -0.1, 0.0,  1.0, 0.0, // Bottom right
+     0.1,  0.1, 0.0,  1.0, 1.0, // Top right
+    -0.1,  0.1, 0.0,  0.0, 1.0  // Top left
 ]);
   vertexBuffer = device.createBuffer({
     size: quadVerticesWithUV.byteLength,
@@ -217,29 +219,33 @@ function render() {
 
   const commandEncoder = device.createCommandEncoder();
 
-  // Simulation
   //   encodeComputePassAndSubmit(
   //     commandEncoder,
   //     computePipeline,
   //     bindGroup[simulationIteration % 2]
   //   );
 
-  // Uniforms
-  // const uniformsArray = new Float32Array([
-  //   canvas.width,           canvas.height,          0.0,                    0.0,
-  //   state.sun.x,            state.sun.y,            state.sun.z,            0.0,
-  //   state.camera.pos.x,     state.camera.pos.y,     state.camera.pos.z,     0.0,
-  //   state.camera.target.x,  state.camera.target.y,  state.camera.target.z,  0.0
-  // ]);
-  // device.queue.writeBuffer(uniformBuffer, 0, uniformsArray.buffer);
-
+  // Simulation
   for (let i = 0; i < particleCount; ++i) {
     const offset = i * (storageUnitSize / 4);
+
     storageValues.set(
-      [rand(-1, 1), rand(-1, 1), rand(-1, 1)],
+      [
+        state.particles.positions[i].x,
+        state.particles.positions[i].y,
+        state.particles.positions[i].z,
+      ],
       offset + positionOffset
     );
-    storageValues.set([rand()], offset + pressureOffset);
+
+    const density = calculateDensity(
+      state.particles.positions[i],
+      state.particles.positions,
+      state.particles.smoothingRadius
+    );
+
+    storageValues.set([density], offset + densityOffset);
+    storageValues.set([0.0], offset + pressureOffset);
   }
 
   device.queue.writeBuffer(storageBuffer, 0, storageValues);
