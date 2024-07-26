@@ -11,43 +11,6 @@ canvas.height = window.innerHeight;
 const AUDIO = true;
 const DEBUG = true;
 
-let device;
-let storageBuffer;
-let vertexBuffer;
-let bindGroup;
-let renderPipeline;
-let renderPassDescriptor;
-let context;
-let audioCtx;
-let analyser;
-let fftDataArray;
-let shaderCode;
-
-const rand = (min, max) => {
-  if (min === undefined) {
-    min = 0;
-    max = 1;
-  } else if (max === undefined) {
-    max = min;
-    min = 0;
-  }
-  return min + Math.random() * (max - min);
-};
-
-const particleCount = 100;
-
-const storageUnitSize =
-  3 * 4 + // position, 3 x f32
-  1 * 4 + // density, 1 x f32,
-  1 * 4; // pressure, 1 x f32,
-
-const storageBufferSize = storageUnitSize * particleCount;
-const storageValues = new Float32Array(storageBufferSize / 4);
-
-const positionOffset = 0;
-const densityOffset = positionOffset + 3;
-const pressureOffset = densityOffset + 1;
-
 const state = {
   halt: false,
   epoch: performance.now(),
@@ -58,15 +21,24 @@ const state = {
     offset: 22,
     beat: 0,
   },
-  particles: {
-    smoothingRadius: 0.2,
-    positions: [...Array(particleCount)].map((_) => ({
-      x: rand(-0.5, 0.5),
-      y: rand(-0.5, 0.5),
+  camera: {
+    position: {
+      x: 10,
+      y: 10,
       z: 0,
-    })),
-    densities: [...Array(particleCount)].map((_) => 0),
-    pressures: [...Array(particleCount)].map((_) => 0),
+    },
+    target: {
+      x: 0,
+      y: 0,
+      z: 0,
+    },
+  },
+  sun: {
+    position: {
+      x: 0,
+      y: 0,
+      z: 0,
+    },
   },
 };
 
@@ -89,47 +61,164 @@ document.addEventListener(
   true
 );
 
-function smoothingKernel(radius, distance) {
-  const volume = (Math.PI * Math.pow(radius, 8)) / 4;
-  const value = Math.max(0, radius * radius - distance * distance);
-  return (value * value * value) / volume;
-}
+async function initialize(shaderCode, analyser) {
+  const fftDataArray = new Uint8Array(analyser.frequencyBinCount);
 
-function calculateDensity(samplePoint, positions, smoothingRadius) {
-  let density = 0;
-  const mass = 1;
+  const adapter = await navigator.gpu.requestAdapter();
+  const device = await adapter.requestDevice();
 
-  for (const position of positions) {
-    const distance = Math.hypot(
-      position.x - samplePoint.x,
-      position.y - samplePoint.y,
-      position.z - samplePoint.z
-    );
-    const influence = smoothingKernel(smoothingRadius, distance);
-    density += mass * influence;
+  const context = canvas.getContext("webgpu");
+  const format = navigator.gpu.getPreferredCanvasFormat();
+  context.configure({
+    device: device,
+    format: format,
+    alphaMode: "opaque",
+  });
+
+  // prettier-ignore
+  const vertices = new Float32Array([
+    -1.0, -1.0, // Bottom left
+     1.0, -1.0, // Bottom right
+    -1.0,  1.0, // Top left
+
+    -1.0,  1.0, // Bottom right
+     1.0, -1.0, // Top right
+     1.0,  1.0, // Top left
+  ]);
+
+  const vertexBuffer = device.createBuffer({
+    size: vertices.byteLength,
+    usage: GPUBufferUsage.VERTEX,
+    mappedAtCreation: true,
+  });
+  new Float32Array(vertexBuffer.getMappedRange()).set(vertices);
+  vertexBuffer.unmap();
+
+  // Uniform buffer setup
+  const uniformBuffer = device.createBuffer({
+    size: 64, // Enough for two vec4s and two vec3s
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
+  const shaderModule = device.createShaderModule({
+    label: "main shader",
+    code: shaderCode,
+  });
+
+  const renderPipeline = await createRenderPipeline(
+    device,
+    shaderModule,
+    format
+  );
+
+  const bindGroup = device.createBindGroup({
+    label: "uniforms bind group",
+    layout: renderPipeline.getBindGroupLayout(0),
+    entries: [
+      {
+        binding: 0,
+        resource: { buffer: uniformBuffer },
+      },
+    ],
+  });
+
+  function update(dt) {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    if (DEBUG) {
+      fps.update(dt);
+    }
+
+    updateFFT();
+    updateUniforms();
   }
 
-  return density;
+  function updateFFT() {
+    analyser.getByteFrequencyData(fftDataArray);
+    state.audio.beat = fftDataArray[state.audio.offset];
+  }
+
+  function updateUniforms() {
+    const data = new Float32Array([
+      state.camera.position.x,
+      state.camera.position.y,
+      state.camera.position.z,
+      0,
+
+      state.camera.target.x,
+      state.camera.target.y,
+      state.camera.target.z,
+      0,
+
+      canvas.width,
+      canvas.height,
+      0,
+      0,
+
+      state.sun.position.x,
+      state.sun.position.y,
+      state.sun.position.z,
+      0,
+    ]);
+    device.queue.writeBuffer(uniformBuffer, 0, data);
+  }
+
+  function render() {
+    state.now = performance.now() - state.epoch;
+    const dt = (state.now - state.lastRenderTime) / 1000;
+    state.lastRenderTime = state.now;
+
+    if (state.halt) {
+      return;
+    }
+
+    update(dt);
+
+    const commandEncoder = device.createCommandEncoder();
+    const textureView = context.getCurrentTexture().createView();
+    const passDescriptor = {
+      label: "main canvas renderPass",
+      colorAttachments: [
+        {
+          view: textureView,
+          clearValue: [0.3, 0.3, 0.3, 1],
+          loadOp: "clear",
+          storeOp: "store",
+        },
+      ],
+    };
+
+    encodeRenderPassAndSubmit(
+      commandEncoder,
+      renderPipeline,
+      bindGroup,
+      passDescriptor,
+      vertexBuffer
+    );
+
+    device.queue.submit([commandEncoder.finish()]);
+
+    window.requestAnimationFrame(render);
+  }
+
+  render();
 }
 
-async function createRenderPipeline(shaderModule) {
+async function createRenderPipeline(device, shaderModule, format) {
   return device.createRenderPipelineAsync({
+    label: "main render pipeline",
     layout: "auto",
     vertex: {
       module: shaderModule,
       entryPoint: "vs",
       buffers: [
         {
-          arrayStride: (3 + 2) * 4, // xyz, uv
+          arrayStride: 2 * 4, // uv
           attributes: [
             {
               shaderLocation: 0,
               offset: 0,
-              format: "float32x3",
-            },
-            {
-              shaderLocation: 1,
-              offset: 3 * 4,
               format: "float32x2",
             },
           ],
@@ -139,9 +228,11 @@ async function createRenderPipeline(shaderModule) {
     fragment: {
       module: shaderModule,
       entryPoint: "fs",
-      targets: [{ format: "bgra8unorm" }],
+      targets: [{ format: format }],
     },
-    primitive: { topology: "triangle-strip" },
+    primitive: {
+      topology: "triangle-strip",
+    },
   });
 }
 
@@ -156,124 +247,8 @@ function encodeRenderPassAndSubmit(
   passEncoder.setPipeline(pipeline);
   passEncoder.setBindGroup(0, bindGroup);
   passEncoder.setVertexBuffer(0, vertexBuffer);
-  passEncoder.draw(6, particleCount);
+  passEncoder.draw(6, 1, 0, 0);
   passEncoder.end();
-}
-
-async function createRenderResources() {
-  // prettier-ignore
-  const quadVerticesWithUV = new Float32Array([
-    -0.1, -0.1, 0.0,  0.0, 0.0, // Bottom left
-     0.1, -0.1, 0.0,  1.0, 0.0, // Bottom right
-    -0.1,  0.1, 0.0,  0.0, 1.0, // Top left
-    //
-     0.1, -0.1, 0.0,  1.0, 0.0, // Bottom right
-     0.1,  0.1, 0.0,  1.0, 1.0, // Top right
-    -0.1,  0.1, 0.0,  0.0, 1.0  // Top left
-]);
-  vertexBuffer = device.createBuffer({
-    size: quadVerticesWithUV.byteLength,
-    usage: GPUBufferUsage.VERTEX,
-    mappedAtCreation: true,
-  });
-  new Float32Array(vertexBuffer.getMappedRange()).set(quadVerticesWithUV);
-  vertexBuffer.unmap();
-
-  storageBuffer = device.createBuffer({
-    size: storageBufferSize,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-  });
-
-  const shaderModule = device.createShaderModule({ code: shaderCode });
-  // computePipeline = await createComputePipeline(shaderModule, pipelineLayout);
-  renderPipeline = await createRenderPipeline(shaderModule);
-
-  bindGroup = device.createBindGroup({
-    label: "bind group for objects",
-    layout: renderPipeline.getBindGroupLayout(0),
-    entries: [{ binding: 0, resource: { buffer: storageBuffer } }],
-  });
-
-  renderPassDescriptor = {
-    label: "our basic canvas renderPass",
-    colorAttachments: [
-      {
-        clearValue: [0.3, 0.3, 0.3, 1],
-        loadOp: "clear",
-        storeOp: "store",
-      },
-    ],
-  };
-}
-
-function render() {
-  state.now = performance.now() - state.epoch;
-  const dt = (state.now - state.lastRenderTime) / 1000;
-  state.lastRenderTime = state.now;
-
-  if (state.halt) {
-    return;
-  }
-
-  update(dt);
-
-  const commandEncoder = device.createCommandEncoder();
-
-  //   encodeComputePassAndSubmit(
-  //     commandEncoder,
-  //     computePipeline,
-  //     bindGroup[simulationIteration % 2]
-  //   );
-
-  // Simulation
-  for (let i = 0; i < particleCount; ++i) {
-    const offset = i * (storageUnitSize / 4);
-
-    storageValues.set(
-      [
-        state.particles.positions[i].x,
-        state.particles.positions[i].y,
-        state.particles.positions[i].z,
-      ],
-      offset + positionOffset
-    );
-
-    const density = calculateDensity(
-      state.particles.positions[i],
-      state.particles.positions,
-      state.particles.smoothingRadius
-    );
-
-    storageValues.set([density], offset + densityOffset);
-    storageValues.set([0.0], offset + pressureOffset);
-  }
-
-  device.queue.writeBuffer(storageBuffer, 0, storageValues);
-
-  // Render
-  renderPassDescriptor.colorAttachments[0].view = context
-    .getCurrentTexture()
-    .createView();
-
-  encodeRenderPassAndSubmit(
-    commandEncoder,
-    renderPipeline,
-    bindGroup,
-    renderPassDescriptor,
-    vertexBuffer
-  );
-
-  device.queue.submit([commandEncoder.finish()]);
-
-  requestAnimationFrame(render);
-}
-
-function update(dt) {
-  if (DEBUG) {
-    fps.update(dt);
-  }
-  analyser.getByteFrequencyData(fftDataArray);
-  state.audio.beat = fftDataArray[state.audio.offset];
 }
 
 async function main() {
@@ -284,24 +259,12 @@ async function main() {
     debug.setup(state);
   }
 
-  let a = setupAudio();
+  const { audioCtx, analyser } = setupAudio();
+  analyser.fftSize = 256;
 
-  shaderCode = DEBUG
+  const shaderCode = DEBUG
     ? await fetch("src/shader/shader.wgsl").then((res) => res.text())
     : MINIFIED_SHADER;
 
-  audioCtx = a.audioCtx;
-  analyser = a.analyser;
-  analyser.fftSize = 256;
-  fftDataArray = new Uint8Array(analyser.frequencyBinCount);
-
-  const gpuAdapter = await navigator.gpu.requestAdapter();
-  device = await gpuAdapter.requestDevice();
-
-  await createRenderResources();
-
-  context = canvas.getContext("webgpu");
-  context.configure({ device, format: "bgra8unorm", alphaMode: "opaque" });
-
-  window.requestAnimationFrame(render);
+  initialize(shaderCode, analyser);
 }

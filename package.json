@@ -12,6 +12,7 @@
   },
   "devDependencies": {
     "@rollup/plugin-replace": "^5.0.5",
+    "@webgpu/types": "^0.1.44",
     "browser-sync": "^3.0.2",
     "dat.gui": "^0.7.9",
     "rollup": "^4.13.0"
