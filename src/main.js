@@ -25,19 +25,19 @@ const state = {
     position: {
       x: 10,
       y: 10,
-      z: 0,
+      z: 10,
     },
     target: {
-      x: 0,
-      y: 0,
-      z: 0,
+      x: 1,
+      y: 1,
+      z: 1,
     },
   },
   sun: {
     position: {
-      x: 0,
-      y: 0,
-      z: 0,
+      x: 1,
+      y: 2,
+      z: 3,
     },
   },
 };
