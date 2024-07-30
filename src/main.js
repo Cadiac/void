@@ -23,14 +23,14 @@ const state = {
   },
   camera: {
     position: {
-      x: 10,
+      x: 5,
       y: 10,
-      z: 10,
+      z: 0,
     },
     target: {
-      x: 1,
-      y: 1,
-      z: 1,
+      x: 0,
+      y: 0,
+      z: 0,
     },
   },
   sun: {
@@ -96,7 +96,7 @@ async function initialize(shaderCode, analyser) {
 
   // Uniform buffer setup
   const uniformBuffer = device.createBuffer({
-    size: 64, // Enough for two vec4s and two vec3s
+    size: 5 * 4 * 4,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
@@ -159,6 +159,11 @@ async function initialize(shaderCode, analyser) {
       state.sun.position.x,
       state.sun.position.y,
       state.sun.position.z,
+      0,
+
+      state.now,
+      0,
+      0,
       0,
     ]);
     device.queue.writeBuffer(uniformBuffer, 0, data);

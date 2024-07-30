@@ -25,6 +25,7 @@ struct Uniforms {
     camera: Camera,
     resolution: vec2<f32>,
     sun: Light,
+    time: f32
 };
 
 struct Surface {
@@ -38,14 +39,72 @@ struct Ray {
   isHit: bool,
 };
 
-fn sdSphere(position: vec3<f32>, radius: f32) -> f32 {
+fn maxf(a: vec3<f32>, b: f32) -> f32 {
+    let x = max(a.x, b);
+    let y = max(a.y, b);
+    let z = max(a.z, b);
+    return max(max(x, y), z);
+}
+
+// http://en.wikipedia.org/wiki/Rotation_matrix#Basic_rotations
+fn rotateX(theta: f32) -> mat3x3<f32> {
+    let s = sin(theta);
+    let c = cos(theta);
+    return mat3x3(vec3(1, 0, 0), vec3(0, c, -s), vec3(0, s, c));
+}
+
+fn rotateY(theta: f32) -> mat3x3<f32> {
+    let s = sin(theta);
+    let c = cos(theta);
+    return mat3x3(vec3(c, 0, s), vec3(0, 1, 0), vec3(-s, 0, c));
+}
+
+fn rotateZ(theta: f32) -> mat3x3<f32> {
+    let s = sin(theta);
+    let c = cos(theta);
+    return mat3x3(vec3(c, -s, 0), vec3(s, c, 0), vec3(0, 0, 1));
+}
+
+
+fn sphere(position: vec3<f32>, radius: f32) -> f32 {
     return length(position) - radius;
 }
 
-fn scene(position: vec3<f32>) -> Surface {
-    let dist = sdSphere(position, 1.0);
+fn cube(position: vec3<f32>, dimensions: vec3<f32>) -> f32 {
+    let q = abs(position) - dimensions;
+    return length(maxf(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
 
-    return Surface(1, dist);
+fn plane(position: vec3<f32>, up: vec3<f32>, height: f32) -> f32 {
+    // "up" must be normalized
+    return dot(position, up) + height;
+}
+
+fn opUnion(a: Surface, b: Surface) -> Surface {
+    if a.distance < b.distance {
+        return a;
+    }
+    return b;
+}
+
+fn scene(position: vec3<f32>) -> Surface {
+    let s = Surface(1, sphere(position, 1.0));
+    let c = Surface(2, cube(
+        rotateX(uniforms.time * 0.0005) * rotateY(uniforms.time * 0.0005) * rotateZ(uniforms.time * 0.0005) * (position - vec3(3.0)), vec3(2.0)
+    ));
+
+    let p = Surface(3, plane(position, vec3(0.0, 1.0, 0.0), 10.0));
+
+    var surface = opUnion(
+        s,
+        c
+    );
+    surface = opUnion(
+        surface,
+        p
+    );
+
+    return surface;
 }
 
 fn sky(camera: Camera, rayDir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f32> {
@@ -101,7 +160,7 @@ fn softShadows(sunDir: vec3<f32>, position: vec3<f32>, k: f32) -> f32 {
     var opacity = 1.0;
     var depth = 1.0;
 
-    for (var s = 0; s < 400; s++) {
+    for (var s = 0; s < 250; s++) {
         if depth >= MAX_DIST {
             return opacity;
         }
@@ -120,10 +179,10 @@ fn softShadows(sunDir: vec3<f32>, position: vec3<f32>, k: f32) -> f32 {
 fn lightning(sunDir: vec3<f32>, normal: vec3<f32>, position: vec3<f32>, rayDir: vec3<f32>,
     rayDist: f32) -> vec3<f32> {
 
-    let ambient = vec3(0.5); // TODO: ambient
-    let diffuseColor = vec3(1.0, 0.0, 0.0); // TODO: diffuse
-    let specularColor = vec3(0.0, 1.0, 0.0); // TODO: specular
-    let hardness = 50.0; // TODO: hardness
+    let ambient = vec3(0.2); // TODO: ambient
+    let diffuseColor = vec3(0.5, 0.4, 0.3); // TODO: diffuse
+    let specularColor = vec3(0.7, 0.6, 0.5); // TODO: specular
+    let hardness = 10.0; // TODO: hardness
 
     let shadow = softShadows(sunDir, position, 10.0);
     let dotLN = clamp(dot(sunDir, normal) * shadow, 0.0, 1.0);
@@ -171,7 +230,13 @@ fn render(camera: Camera, rayDir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f32> {
 
         color = mix(color, newColor, reflection);
 
-        reflection = 0.0; // TODO: materials
+        // TODO: read reflection from material
+        if ray.surface.id < 3 {
+            reflection *= 0.5;
+        } else {
+            reflection = 0.0;
+        }
+
         if reflection < EPSILON {
             break;
         }
@@ -194,20 +259,22 @@ fn lookAt(camera: Camera, up: vec3<f32>) -> mat4x4<f32> {
 
 @fragment
 fn fs(@builtin(position) FragCoord: vec4<f32>) -> @location(0) vec4<f32> {
-    let uv = (FragCoord.xy - uniforms.resolution.xy / 2.0);
+    let uv = FragCoord.xy - uniforms.resolution.xy / 2.0;
     let w = uniforms.resolution.y / tan(radians(60.0) / 2.0);
+    let up = normalize(vec3(0.0, -1.0, 0.0));
+
     let viewDir = normalize(vec3(uv, -w));
-    let viewToWorld = lookAt(uniforms.camera, normalize(vec3(0.0, 1.0, 0.0)));
+    let viewToWorld = lookAt(uniforms.camera, up);
     let rayDir = (viewToWorld * vec4(viewDir, 0.0)).xyz;
 
-    let sunDir = vec3(0.0, 0.0, -1.0);
+    let sunDir = normalize(vec3(1.0, 2.0, 3.0));
 
     var color = render(uniforms.camera, rayDir, sunDir);
 
-    // let fadeInDuration = 5000.0;
-    // if uniforms.time < fadeInDuration {
-    //     color = mix(color, vec3(0.0), fadeInDuration - uniforms.time / fadeInDuration);
-    // }
+    let fadeInDuration = 3000.0;
+    if uniforms.time < fadeInDuration {
+        color = mix(color, vec3(0.0), (fadeInDuration - uniforms.time) / fadeInDuration);
+    }
 
     // color.x = smoothstep(0.0, 1.0, color.x);
     // color.y = smoothstep(0.0, 1.0, color.y);
