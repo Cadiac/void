@@ -1,16 +1,28 @@
 const MAX_DIST = 250.0;
 const EPSILON = 0.00001;
 
-const FOG_COLOR = vec3(.8, .7, .6);
+const FOG_COLOR = vec3(.3, .2, .1);
 const COLOR_SHIFT = vec3(1., .92, 1.);
-const SKY_COLOR = vec3(.7, .8, .9);
+const SKY_COLOR = vec3(.1, .2, .3);
 
 @vertex
-fn vs(@location(0) position: vec2<f32>) -> @builtin(position) vec4<f32> {
-    return vec4<f32>(position, 0.0, 1.0);
-}
+fn vs(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
+    let pos = array(
+        // First triangle
+        vec2f(-1.0, -1.0), // bottom left
+        vec2f(1.0, -1.0),  // bottom right
+        vec2f(-1.0, 1.0),  // top left
 
-@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+        // Second triangle
+        vec2f(-1.0, 1.0),  // bottom right
+        vec2f(1.0, -1.0),  // top right
+        vec2f(1.0, 1.0),   // top left
+    );
+
+    let uv = pos[vertexIndex];
+
+    return vec4f(uv, 0.0, 1.0);
+}
 
 struct Camera {
     position: vec3<f32>,
@@ -88,9 +100,9 @@ fn opUnion(a: Surface, b: Surface) -> Surface {
 }
 
 fn scene(position: vec3<f32>) -> Surface {
-    let s = Surface(1, sphere(position, 1.0));
+    let s = Surface(1, sphere(position - vec3(0.0, 7.0, 0.0), 4.0));
     let c = Surface(2, cube(
-        rotateX(uniforms.time * 0.0005) * rotateY(uniforms.time * 0.0005) * rotateZ(uniforms.time * 0.0005) * (position - vec3(3.0)), vec3(2.0)
+        rotateX(uniforms.time * 0.0005) * rotateY(uniforms.time * 0.0005) * rotateZ(uniforms.time * 0.0005) * position, vec3(1.0)
     ));
 
     let p = Surface(3, plane(position, vec3(0.0, 1.0, 0.0), 10.0));
@@ -231,7 +243,7 @@ fn render(camera: Camera, rayDir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f32> {
         color = mix(color, newColor, reflection);
 
         // TODO: read reflection from material
-        if ray.surface.id < 3 {
+        if ray.surface.id < 2 {
             reflection *= 0.5;
         } else {
             reflection = 0.0;
@@ -257,6 +269,8 @@ fn lookAt(camera: Camera, up: vec3<f32>) -> mat4x4<f32> {
     return mat4x4(vec4(s, .0), vec4(u, .0), vec4(-f, .0), vec4(.0, .0, .0, 1.));
 }
 
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+
 @fragment
 fn fs(@builtin(position) FragCoord: vec4<f32>) -> @location(0) vec4<f32> {
     let uv = FragCoord.xy - uniforms.resolution.xy / 2.0;
@@ -276,9 +290,9 @@ fn fs(@builtin(position) FragCoord: vec4<f32>) -> @location(0) vec4<f32> {
         color = mix(color, vec3(0.0), (fadeInDuration - uniforms.time) / fadeInDuration);
     }
 
-    // color.x = smoothstep(0.0, 1.0, color.x);
-    // color.y = smoothstep(0.0, 1.0, color.y);
-    // color.z = smoothstep(0.0, 1.0, color.z);
+    color.x = smoothstep(0.0, 1.0, color.x);
+    color.y = smoothstep(0.0, 1.0, color.y);
+    color.z = smoothstep(0.0, 1.0, color.z);
 
     return vec4<f32>(color, 1.0);
 }

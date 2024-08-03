@@ -23,9 +23,9 @@ const state = {
   },
   camera: {
     position: {
-      x: 5,
-      y: 10,
-      z: 0,
+      x: 4.3,
+      y: -7.6,
+      z: 6.7,
     },
     target: {
       x: 0,
@@ -61,7 +61,7 @@ document.addEventListener(
   true
 );
 
-async function initialize(shaderCode, analyser) {
+async function initialize(mainShaderCode, effectShaderCode, analyser) {
   const fftDataArray = new Uint8Array(analyser.frequencyBinCount);
 
   const adapter = await navigator.gpu.requestAdapter();
@@ -70,55 +70,82 @@ async function initialize(shaderCode, analyser) {
   const context = canvas.getContext("webgpu");
   const format = navigator.gpu.getPreferredCanvasFormat();
   context.configure({
-    device: device,
-    format: format,
+    device,
+    format,
     alphaMode: "opaque",
   });
 
-  // prettier-ignore
-  const vertices = new Float32Array([
-    -1.0, -1.0, // Bottom left
-     1.0, -1.0, // Bottom right
-    -1.0,  1.0, // Top left
-
-    -1.0,  1.0, // Bottom right
-     1.0, -1.0, // Top right
-     1.0,  1.0, // Top left
-  ]);
-
-  const vertexBuffer = device.createBuffer({
-    size: vertices.byteLength,
-    usage: GPUBufferUsage.VERTEX,
-    mappedAtCreation: true,
+  const texture = device.createTexture({
+    format,
+    size: [canvas.width, canvas.height],
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.COPY_DST |
+      GPUTextureUsage.RENDER_ATTACHMENT,
   });
-  new Float32Array(vertexBuffer.getMappedRange()).set(vertices);
-  vertexBuffer.unmap();
 
-  // Uniform buffer setup
   const uniformBuffer = device.createBuffer({
     size: 5 * 4 * 4,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  const shaderModule = device.createShaderModule({
+  const mainShaderModule = device.createShaderModule({
     label: "main shader",
-    code: shaderCode,
+    code: mainShaderCode,
   });
 
-  const renderPipeline = await createRenderPipeline(
+  const mainRenderPipeline = await createRenderPipeline(
+    "main render pipeline",
     device,
-    shaderModule,
+    mainShaderModule,
     format
   );
 
-  const bindGroup = device.createBindGroup({
+  const uniformBindGroup = device.createBindGroup({
     label: "uniforms bind group",
-    layout: renderPipeline.getBindGroupLayout(0),
+    layout: mainRenderPipeline.getBindGroupLayout(0),
     entries: [
       {
         binding: 0,
         resource: { buffer: uniformBuffer },
       },
+    ],
+  });
+
+  const effectShaderModule = device.createShaderModule({
+    label: "effect shader",
+    code: effectShaderCode,
+  });
+
+  const effectRenderPipeline = await createRenderPipeline(
+    "effect render pipeline",
+    device,
+    effectShaderModule,
+    format
+  );
+
+  const asciiTextureSource = await loadImageBitmap("src/textures/ascii.png");
+  const asciiTexture = device.createTexture({
+    label: "ascii texture",
+    format: "rgba8unorm",
+    size: [asciiTextureSource.width, asciiTextureSource.height],
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.COPY_DST |
+      GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+  device.queue.copyExternalImageToTexture(
+    { source: asciiTextureSource, flipY: false },
+    { texture: asciiTexture },
+    { width: asciiTextureSource.width, height: asciiTextureSource.height }
+  );
+
+  const textureBindGroup = device.createBindGroup({
+    label: "texture bind group",
+    layout: effectRenderPipeline.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: texture.createView() },
+      { binding: 1, resource: asciiTexture.createView() },
     ],
   });
 
@@ -181,9 +208,11 @@ async function initialize(shaderCode, analyser) {
     update(dt);
 
     const commandEncoder = device.createCommandEncoder();
-    const textureView = context.getCurrentTexture().createView();
-    const passDescriptor = {
-      label: "main canvas renderPass",
+
+    const textureView = texture.createView();
+
+    const mainPassDescriptor = {
+      label: "main render renderPass",
       colorAttachments: [
         {
           view: textureView,
@@ -196,10 +225,30 @@ async function initialize(shaderCode, analyser) {
 
     encodeRenderPassAndSubmit(
       commandEncoder,
-      renderPipeline,
-      bindGroup,
-      passDescriptor,
-      vertexBuffer
+      mainRenderPipeline,
+      uniformBindGroup,
+      mainPassDescriptor
+    );
+
+    const presentationView = context.getCurrentTexture().createView();
+
+    const effectPassDescriptor = {
+      label: "effect pass renderPass",
+      colorAttachments: [
+        {
+          view: presentationView,
+          clearValue: [0.3, 0.3, 0.3, 1],
+          loadOp: "clear",
+          storeOp: "store",
+        },
+      ],
+    };
+
+    encodeRenderPassAndSubmit(
+      commandEncoder,
+      effectRenderPipeline,
+      textureBindGroup,
+      effectPassDescriptor
     );
 
     device.queue.submit([commandEncoder.finish()]);
@@ -210,30 +259,18 @@ async function initialize(shaderCode, analyser) {
   render();
 }
 
-async function createRenderPipeline(device, shaderModule, format) {
+async function createRenderPipeline(label, device, shaderModule, format) {
   return device.createRenderPipelineAsync({
-    label: "main render pipeline",
+    label,
     layout: "auto",
     vertex: {
       module: shaderModule,
       entryPoint: "vs",
-      buffers: [
-        {
-          arrayStride: 2 * 4, // uv
-          attributes: [
-            {
-              shaderLocation: 0,
-              offset: 0,
-              format: "float32x2",
-            },
-          ],
-        },
-      ],
     },
     fragment: {
       module: shaderModule,
       entryPoint: "fs",
-      targets: [{ format: format }],
+      targets: [{ format }],
     },
     primitive: {
       topology: "triangle-strip",
@@ -245,15 +282,19 @@ function encodeRenderPassAndSubmit(
   commandEncoder,
   pipeline,
   bindGroup,
-  passDescriptor,
-  vertexBuffer
+  passDescriptor
 ) {
   const passEncoder = commandEncoder.beginRenderPass(passDescriptor);
   passEncoder.setPipeline(pipeline);
   passEncoder.setBindGroup(0, bindGroup);
-  passEncoder.setVertexBuffer(0, vertexBuffer);
   passEncoder.draw(6, 1, 0, 0);
   passEncoder.end();
+}
+
+async function loadImageBitmap(url) {
+  const res = await fetch(url);
+  const blob = await res.blob();
+  return await createImageBitmap(blob, { colorSpaceConversion: "none" });
 }
 
 async function main() {
@@ -267,9 +308,13 @@ async function main() {
   const { audioCtx, analyser } = setupAudio();
   analyser.fftSize = 256;
 
-  const shaderCode = DEBUG
-    ? await fetch("src/shader/shader.wgsl").then((res) => res.text())
+  const mainShaderCode = DEBUG
+    ? await fetch("src/shader/main.wgsl").then((res) => res.text())
     : MINIFIED_SHADER;
 
-  initialize(shaderCode, analyser);
+  const effectShaderCode = DEBUG
+    ? await fetch("src/shader/effect.wgsl").then((res) => res.text())
+    : MINIFIED_EFFECT_SHADER;
+
+  initialize(mainShaderCode, effectShaderCode, analyser);
 }
