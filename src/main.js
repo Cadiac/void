@@ -61,7 +61,12 @@ document.addEventListener(
   true
 );
 
-async function initialize(mainShaderCode, effectShaderCode, analyser) {
+async function initialize(
+  mainShaderCode,
+  effectShaderCode,
+  computeShaderCode,
+  analyser
+) {
   const fftDataArray = new Uint8Array(analyser.frequencyBinCount);
 
   const adapter = await navigator.gpu.requestAdapter();
@@ -89,15 +94,10 @@ async function initialize(mainShaderCode, effectShaderCode, analyser) {
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  const mainShaderModule = device.createShaderModule({
-    label: "main shader",
-    code: mainShaderCode,
-  });
-
   const mainRenderPipeline = await createRenderPipeline(
-    "main render pipeline",
+    "main",
     device,
-    mainShaderModule,
+    mainShaderCode,
     format
   );
 
@@ -112,15 +112,35 @@ async function initialize(mainShaderCode, effectShaderCode, analyser) {
     ],
   });
 
-  const effectShaderModule = device.createShaderModule({
-    label: "effect shader",
-    code: effectShaderCode,
+  const computePipeline = await createComputePipeline(
+    "compute",
+    device,
+    computeShaderCode
+  );
+
+  const sobelTextureDescriptor = {
+    size: { width: canvas.width, height: canvas.height },
+    format: "rgba8unorm",
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.STORAGE_BINDING |
+      GPUTextureUsage.COPY_SRC,
+  };
+  const sobelTexture = device.createTexture(sobelTextureDescriptor);
+
+  const computeBindGroup = device.createBindGroup({
+    label: "compute bind group",
+    layout: computePipeline.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: texture.createView() },
+      { binding: 1, resource: sobelTexture.createView() },
+    ],
   });
 
   const effectRenderPipeline = await createRenderPipeline(
-    "effect render pipeline",
+    "effect",
     device,
-    effectShaderModule,
+    effectShaderCode,
     format
   );
 
@@ -163,6 +183,7 @@ async function initialize(mainShaderCode, effectShaderCode, analyser) {
       { binding: 0, resource: texture.createView() },
       { binding: 1, resource: asciiTexture.createView() },
       { binding: 2, resource: edgesTexture.createView() },
+      { binding: 3, resource: sobelTexture.createView() },
     ],
   });
 
@@ -240,7 +261,7 @@ async function initialize(mainShaderCode, effectShaderCode, analyser) {
       ],
     };
 
-    encodeRenderPassAndSubmit(
+    dispatchRenderPass(
       commandEncoder,
       mainRenderPipeline,
       uniformBindGroup,
@@ -248,6 +269,14 @@ async function initialize(mainShaderCode, effectShaderCode, analyser) {
     );
 
     const presentationView = context.getCurrentTexture().createView();
+
+    dispatchComputeShader(
+      commandEncoder,
+      computePipeline,
+      computeBindGroup,
+      canvas.width,
+      canvas.height
+    );
 
     const effectPassDescriptor = {
       label: "effect pass renderPass",
@@ -261,7 +290,7 @@ async function initialize(mainShaderCode, effectShaderCode, analyser) {
       ],
     };
 
-    encodeRenderPassAndSubmit(
+    dispatchRenderPass(
       commandEncoder,
       effectRenderPipeline,
       textureBindGroup,
@@ -276,9 +305,14 @@ async function initialize(mainShaderCode, effectShaderCode, analyser) {
   render();
 }
 
-async function createRenderPipeline(label, device, shaderModule, format) {
+async function createRenderPipeline(label, device, shaderCode, format) {
+  const shaderModule = device.createShaderModule({
+    label: `${label} shader`,
+    code: shaderCode,
+  });
+
   return device.createRenderPipelineAsync({
-    label,
+    label: `${label} render pipeline`,
     layout: "auto",
     vertex: {
       module: shaderModule,
@@ -295,7 +329,25 @@ async function createRenderPipeline(label, device, shaderModule, format) {
   });
 }
 
-function encodeRenderPassAndSubmit(
+async function createComputePipeline(label, device, shaderCode) {
+  const shaderModule = device.createShaderModule({
+    label: `${label} shader`,
+    code: shaderCode,
+  });
+
+  const pipeline = device.createComputePipeline({
+    label: `${label} render pipeline`,
+    layout: "auto",
+    compute: {
+      module: shaderModule,
+      entryPoint: "main",
+    },
+  });
+
+  return pipeline;
+}
+
+function dispatchRenderPass(
   commandEncoder,
   pipeline,
   bindGroup,
@@ -305,6 +357,20 @@ function encodeRenderPassAndSubmit(
   passEncoder.setPipeline(pipeline);
   passEncoder.setBindGroup(0, bindGroup);
   passEncoder.draw(6, 1, 0, 0);
+  passEncoder.end();
+}
+
+function dispatchComputeShader(
+  commandEncoder,
+  pipeline,
+  bindGroup,
+  width,
+  height
+) {
+  const passEncoder = commandEncoder.beginComputePass();
+  passEncoder.setPipeline(pipeline);
+  passEncoder.setBindGroup(0, bindGroup);
+  passEncoder.dispatchWorkgroups(Math.ceil(width / 8), Math.ceil(height / 8));
   passEncoder.end();
 }
 
@@ -333,5 +399,9 @@ async function main() {
     ? await fetch("src/shader/effect.wgsl").then((res) => res.text())
     : MINIFIED_EFFECT_SHADER;
 
-  initialize(mainShaderCode, effectShaderCode, analyser);
+  const computeShaderCode = DEBUG
+    ? await fetch("src/shader/compute.wgsl").then((res) => res.text())
+    : MINIFIED_COMPUTE_SHADER;
+
+  initialize(mainShaderCode, effectShaderCode, computeShaderCode, analyser);
 }
