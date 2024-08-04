@@ -140,12 +140,29 @@ async function initialize(mainShaderCode, effectShaderCode, analyser) {
     { width: asciiTextureSource.width, height: asciiTextureSource.height }
   );
 
+  const edgesTextureSource = await loadImageBitmap("src/textures/edges.png");
+  const edgesTexture = device.createTexture({
+    label: "edges texture",
+    format: "rgba8unorm",
+    size: [edgesTextureSource.width, edgesTextureSource.height],
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.COPY_DST |
+      GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+  device.queue.copyExternalImageToTexture(
+    { source: edgesTextureSource, flipY: false },
+    { texture: edgesTexture },
+    { width: edgesTextureSource.width, height: edgesTextureSource.height }
+  );
+
   const textureBindGroup = device.createBindGroup({
     label: "texture bind group",
     layout: effectRenderPipeline.getBindGroupLayout(0),
     entries: [
       { binding: 0, resource: texture.createView() },
       { binding: 1, resource: asciiTexture.createView() },
+      { binding: 2, resource: edgesTexture.createView() },
     ],
   });
 
