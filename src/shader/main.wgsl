@@ -1,9 +1,9 @@
 const MAX_DIST = 250.0;
 const EPSILON = 0.00001;
 
-const FOG_COLOR = vec3(.3, .2, .1);
+const FOG_COLOR = vec3(0.5, 0.4, 0.3);
 const COLOR_SHIFT = vec3(1., .92, 1.);
-const SKY_COLOR = vec3(.1, .2, .3);
+const SKY_COLOR = vec3(0.8);
 
 @vertex
 fn vs(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
@@ -192,8 +192,8 @@ fn lightning(sunDir: vec3<f32>, normal: vec3<f32>, position: vec3<f32>, rayDir: 
     rayDist: f32) -> vec3<f32> {
 
     let ambient = vec3(0.2); // TODO: ambient
-    let diffuseColor = vec3(0.5, 0.4, 0.3); // TODO: diffuse
-    let specularColor = vec3(0.7, 0.6, 0.5); // TODO: specular
+    let diffuseColor = vec3(0.5); // TODO: diffuse
+    let specularColor = vec3(0.8); // TODO: specular
     let hardness = 10.0; // TODO: hardness
 
     let shadow = softShadows(sunDir, position, 10.0);
@@ -243,7 +243,7 @@ fn render(camera: Camera, rayDir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f32> {
         color = mix(color, newColor, reflection);
 
         // TODO: read reflection from material
-        if ray.surface.id < 2 {
+        if ray.surface.id == 1 {
             reflection *= 0.5;
         } else {
             reflection = 0.0;

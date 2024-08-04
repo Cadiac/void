@@ -23,13 +23,13 @@ const state = {
   },
   camera: {
     position: {
-      x: 4.3,
-      y: -7.6,
-      z: 6.7,
+      x: -20.9,
+      y: 3.4,
+      z: 14.4,
     },
     target: {
       x: 0,
-      y: 0,
+      y: 4.5,
       z: 0,
     },
   },
