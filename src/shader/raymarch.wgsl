@@ -5,25 +5,6 @@ const FOG_COLOR = vec3(0.5, 0.4, 0.3);
 const COLOR_SHIFT = vec3(1., .92, 1.);
 const SKY_COLOR = vec3(0.8);
 
-@vertex
-fn vs(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
-    let pos = array(
-        // First triangle
-        vec2f(-1.0, -1.0), // bottom left
-        vec2f(1.0, -1.0),  // bottom right
-        vec2f(-1.0, 1.0),  // top left
-
-        // Second triangle
-        vec2f(-1.0, 1.0),  // bottom right
-        vec2f(1.0, -1.0),  // top right
-        vec2f(1.0, 1.0),   // top left
-    );
-
-    let uv = pos[vertexIndex];
-
-    return vec4f(uv, 0.0, 1.0);
-}
-
 struct Camera {
     position: vec3<f32>,
     lookAt: vec3<f32>,

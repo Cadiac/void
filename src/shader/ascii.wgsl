@@ -5,23 +5,6 @@ struct Uniforms {
     edges: f32,
 };
 
-@vertex
-fn vs(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
-    let pos = array(
-        vec2f(-1.0, -1.0), // bottom left
-        vec2f(1.0, -1.0),  // bottom right
-        vec2f(-1.0, 1.0),  // top left
-        vec2f(-1.0, 1.0),  // bottom right
-        vec2f(1.0, -1.0),  // top right
-        vec2f(1.0, 1.0),   // top left
-    );
-
-    let xy = pos[vertexIndex];
-
-    return vec4f(xy, 0.0, 1.0);
-}
-
-
 @group(0) @binding(0) var frameTexture: texture_2d<f32>;
 @group(0) @binding(1) var asciiTexture: texture_2d<f32>;
 @group(0) @binding(2) var edgesTexture: texture_2d<f32>;

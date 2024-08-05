@@ -22,10 +22,10 @@ const state = {
     beat: 0,
   },
   ascii: {
-    background: 0.5,
-    threshold: 0.1,
-    fill: 1.0,
-    edges: 1.0,
+    background: 1.0,
+    threshold: 0.16,
+    fill: 1.4,
+    edges: 0.89,
   },
   camera: {
     position: {
@@ -67,26 +67,25 @@ document.addEventListener(
   true
 );
 
-async function initialize(
-  mainShaderCode,
-  effectShaderCode,
-  computeShaderCode,
-  analyser
-) {
+async function initialize(analyser) {
   const fftDataArray = new Uint8Array(analyser.frequencyBinCount);
 
   const adapter = await navigator.gpu.requestAdapter();
   const device = await adapter.requestDevice();
 
   const context = canvas.getContext("webgpu");
-  const format = navigator.gpu.getPreferredCanvasFormat();
+  const format = "rgba8unorm";
+  const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
   context.configure({
     device,
-    format,
+    format: presentationFormat,
     alphaMode: "opaque",
   });
 
-  const texture = device.createTexture({
+  // Raymarch
+
+  const raymarchPassTexture = device.createTexture({
     format,
     size: [canvas.width, canvas.height],
     usage:
@@ -95,27 +94,42 @@ async function initialize(
       GPUTextureUsage.RENDER_ATTACHMENT,
   });
 
-  const uniformBuffer = device.createBuffer({
+  const raymarchUniformsBuffer = device.createBuffer({
     size: 5 * 4 * 4,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  const mainRenderPipeline = await createRenderPipeline(
-    "main",
+  const raymarchShaderCode = DEBUG
+    ? await fetch("src/shader/raymarch.wgsl").then((res) => res.text())
+    : MINIFIED_RAYMARCH_SHADER;
+
+  const raymarchPassPipeline = await createRenderPipeline(
+    "raymarch",
     device,
-    mainShaderCode,
+    raymarchShaderCode,
     format
   );
 
-  const uniformBindGroup = device.createBindGroup({
+  const raymarchPassBindGroup = device.createBindGroup({
     label: "uniforms bind group",
-    layout: mainRenderPipeline.getBindGroupLayout(0),
+    layout: raymarchPassPipeline.getBindGroupLayout(0),
     entries: [
       {
         binding: 0,
-        resource: { buffer: uniformBuffer },
+        resource: { buffer: raymarchUniformsBuffer },
       },
     ],
+  });
+
+  // Sobel Filter - Compute shader
+
+  const sobelTexture = device.createTexture({
+    size: { width: canvas.width, height: canvas.height },
+    format,
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.STORAGE_BINDING |
+      GPUTextureUsage.COPY_SRC,
   });
 
   const asciiUniformsBuffer = device.createBuffer({
@@ -123,49 +137,61 @@ async function initialize(
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  const computePipeline = await createComputePipeline(
-    "compute",
+  const sobelShaderCode = DEBUG
+    ? await fetch("src/shader/sobel.wgsl").then((res) => res.text())
+    : MINIFIED_SOBEL_SHADER;
+
+  const sobelComputePipeline = await createComputePipeline(
+    "sobel filter compute",
     device,
-    computeShaderCode
+    sobelShaderCode
   );
 
-  const sobelTextureDescriptor = {
-    size: { width: canvas.width, height: canvas.height },
-    format: "rgba8unorm",
-    usage:
-      GPUTextureUsage.TEXTURE_BINDING |
-      GPUTextureUsage.STORAGE_BINDING |
-      GPUTextureUsage.COPY_SRC,
-  };
-  const sobelTexture = device.createTexture(sobelTextureDescriptor);
-
-  const computeBindGroup = device.createBindGroup({
-    label: "compute bind group",
-    layout: computePipeline.getBindGroupLayout(0),
+  const sobelComputeBindGroup = device.createBindGroup({
+    label: "sobel filter compute bind group",
+    layout: sobelComputePipeline.getBindGroupLayout(0),
     entries: [
-      { binding: 0, resource: texture.createView() },
+      { binding: 0, resource: raymarchPassTexture.createView() },
       { binding: 1, resource: sobelTexture.createView() },
       { binding: 2, resource: { buffer: asciiUniformsBuffer } },
     ],
   });
 
-  const effectRenderPipeline = await createRenderPipeline(
-    "effect",
+  // Ascii filter render pass
+
+  const asciiPassTexture = device.createTexture({
+    label: "ascii pass texture",
+    size: { width: canvas.width, height: canvas.height },
+    format,
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.STORAGE_BINDING |
+      GPUTextureUsage.COPY_SRC |
+      GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+
+  const asciiShaderCode = DEBUG
+    ? await fetch("src/shader/ascii.wgsl").then((res) => res.text())
+    : MINIFIED_ASCII_SHADER;
+
+  const asciiRenderPipeline = await createRenderPipeline(
+    "ascii",
     device,
-    effectShaderCode,
+    asciiShaderCode,
     format
   );
 
   const asciiTextureSource = await loadImageBitmap("src/textures/ascii.png");
   const asciiTexture = device.createTexture({
     label: "ascii texture",
-    format: "rgba8unorm",
+    format,
     size: [asciiTextureSource.width, asciiTextureSource.height],
     usage:
       GPUTextureUsage.TEXTURE_BINDING |
       GPUTextureUsage.COPY_DST |
       GPUTextureUsage.RENDER_ATTACHMENT,
   });
+
   device.queue.copyExternalImageToTexture(
     { source: asciiTextureSource, flipY: false },
     { texture: asciiTexture },
@@ -175,7 +201,7 @@ async function initialize(
   const edgesTextureSource = await loadImageBitmap("src/textures/edges.png");
   const edgesTexture = device.createTexture({
     label: "edges texture",
-    format: "rgba8unorm",
+    format,
     size: [edgesTextureSource.width, edgesTextureSource.height],
     usage:
       GPUTextureUsage.TEXTURE_BINDING |
@@ -188,15 +214,140 @@ async function initialize(
     { width: edgesTextureSource.width, height: edgesTextureSource.height }
   );
 
-  const textureBindGroup = device.createBindGroup({
-    label: "texture bind group",
-    layout: effectRenderPipeline.getBindGroupLayout(0),
+  const asciiBindGroup = device.createBindGroup({
+    label: "ascii effect bind group",
+    layout: asciiRenderPipeline.getBindGroupLayout(0),
     entries: [
-      { binding: 0, resource: texture.createView() },
+      { binding: 0, resource: raymarchPassTexture.createView() },
       { binding: 1, resource: asciiTexture.createView() },
       { binding: 2, resource: edgesTexture.createView() },
       { binding: 3, resource: sobelTexture.createView() },
       { binding: 4, resource: { buffer: asciiUniformsBuffer } },
+    ],
+  });
+
+  // Bloom - brightness filter
+
+  const sampler = device.createSampler({
+    magFilter: "linear",
+    minFilter: "linear",
+  });
+
+  const brightnessShaderCode = DEBUG
+    ? await fetch("src/shader/brightness.wgsl").then((res) => res.text())
+    : MINIFIED_BRIGHTNESS_SHADER;
+
+  const brightnessPassPipeline = await createRenderPipeline(
+    "brightness filter pass",
+    device,
+    brightnessShaderCode,
+    format
+  );
+
+  const brightnessPassTexture = device.createTexture({
+    label: "brightness pass texture",
+    size: { width: canvas.width, height: canvas.height },
+    format,
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.STORAGE_BINDING |
+      GPUTextureUsage.COPY_SRC |
+      GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+
+  const brightnessPassBindGroup = device.createBindGroup({
+    label: "brightness pass bind group",
+    layout: brightnessPassPipeline.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: sampler },
+      { binding: 1, resource: asciiPassTexture.createView() },
+    ],
+  });
+
+  // Bloom - gaussian blur
+
+  const blurShaderCode = DEBUG
+    ? await fetch("src/shader/blur.wgsl").then((res) => res.text())
+    : MINIFIED_BLUR_SHADER;
+
+  const horizontalBlurPassPipeline = await createRenderPipeline(
+    "horizontal blur",
+    device,
+    blurShaderCode,
+    format,
+    "horizontal_blur"
+  );
+
+  const horizontalBlurPassTexture = device.createTexture({
+    label: "horizontal blur pass texture",
+    size: { width: canvas.width, height: canvas.height },
+    format,
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.STORAGE_BINDING |
+      GPUTextureUsage.COPY_SRC |
+      GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+
+  const horizontalBlurPassBindGroup = device.createBindGroup({
+    label: "brightness pass bind group",
+    layout: horizontalBlurPassPipeline.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: sampler },
+      { binding: 1, resource: brightnessPassTexture.createView() },
+    ],
+  });
+
+  // Bloom - vertical blur filter
+
+  const verticalBlurPassPipeline = await createRenderPipeline(
+    "vertical blur",
+    device,
+    blurShaderCode,
+    format,
+    "vertical_blur"
+  );
+
+  const verticalBlurPassTexture = device.createTexture({
+    label: "vertical blur pass texture",
+    size: { width: canvas.width, height: canvas.height },
+    format,
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.STORAGE_BINDING |
+      GPUTextureUsage.COPY_SRC |
+      GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+
+  const verticalBlurPassBindGroup = device.createBindGroup({
+    label: "brightness pass bind group",
+    layout: verticalBlurPassPipeline.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: sampler },
+      { binding: 1, resource: horizontalBlurPassTexture.createView() },
+    ],
+  });
+
+  // Bloom - combine filter
+
+  const bloomShaderCode = DEBUG
+    ? await fetch("src/shader/bloom.wgsl").then((res) => res.text())
+    : MINIFIED_BLOOM_SHADER;
+
+  const bloomPassPipeline = await createRenderPipeline(
+    "bloom",
+    device,
+    bloomShaderCode,
+    presentationFormat
+  );
+
+  const bloomPassBindGroup = device.createBindGroup({
+    label: "bloom pass bind group",
+    layout: bloomPassPipeline.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: asciiPassTexture.createView() },
+      { binding: 1, resource: verticalBlurPassTexture.createView() },
+      { binding: 2, resource: sampler },
     ],
   });
 
@@ -219,7 +370,7 @@ async function initialize(
 
   function updateUniforms() {
     device.queue.writeBuffer(
-      uniformBuffer,
+      raymarchUniformsBuffer,
       0,
       new Float32Array([
         state.camera.position.x,
@@ -273,55 +424,105 @@ async function initialize(
 
     const commandEncoder = device.createCommandEncoder();
 
-    const textureView = texture.createView();
-
-    const mainPassDescriptor = {
-      label: "main render renderPass",
-      colorAttachments: [
-        {
-          view: textureView,
-          clearValue: [0.3, 0.3, 0.3, 1],
-          loadOp: "clear",
-          storeOp: "store",
-        },
-      ],
-    };
-
     dispatchRenderPass(
       commandEncoder,
-      mainRenderPipeline,
-      uniformBindGroup,
-      mainPassDescriptor
+      raymarchPassPipeline,
+      raymarchPassBindGroup,
+      {
+        label: "raymarch pass",
+        colorAttachments: [
+          {
+            view: raymarchPassTexture.createView(),
+            clearValue: [0.3, 0.3, 0.3, 1],
+            loadOp: "clear",
+            storeOp: "store",
+          },
+        ],
+      }
     );
-
-    const presentationView = context.getCurrentTexture().createView();
 
     dispatchComputeShader(
       commandEncoder,
-      computePipeline,
-      computeBindGroup,
+      sobelComputePipeline,
+      sobelComputeBindGroup,
       canvas.width,
       canvas.height
     );
 
-    const effectPassDescriptor = {
-      label: "effect pass renderPass",
+    dispatchRenderPass(commandEncoder, asciiRenderPipeline, asciiBindGroup, {
+      label: "ascii filter pass",
       colorAttachments: [
         {
-          view: presentationView,
+          view: asciiPassTexture.createView(),
           clearValue: [0.3, 0.3, 0.3, 1],
           loadOp: "clear",
           storeOp: "store",
         },
       ],
-    };
+    });
 
     dispatchRenderPass(
       commandEncoder,
-      effectRenderPipeline,
-      textureBindGroup,
-      effectPassDescriptor
+      brightnessPassPipeline,
+      brightnessPassBindGroup,
+      {
+        label: "brightness filter pass",
+        colorAttachments: [
+          {
+            view: brightnessPassTexture.createView(),
+            clearValue: [0.3, 0.3, 0.3, 1],
+            loadOp: "clear",
+            storeOp: "store",
+          },
+        ],
+      }
     );
+
+    dispatchRenderPass(
+      commandEncoder,
+      horizontalBlurPassPipeline,
+      horizontalBlurPassBindGroup,
+      {
+        label: "horizontal blur filter pass",
+        colorAttachments: [
+          {
+            view: horizontalBlurPassTexture.createView(),
+            clearValue: [0.3, 0.3, 0.3, 1],
+            loadOp: "clear",
+            storeOp: "store",
+          },
+        ],
+      }
+    );
+
+    dispatchRenderPass(
+      commandEncoder,
+      verticalBlurPassPipeline,
+      verticalBlurPassBindGroup,
+      {
+        label: "gaussian blur filter pass",
+        colorAttachments: [
+          {
+            view: verticalBlurPassTexture.createView(),
+            clearValue: [0.3, 0.3, 0.3, 1],
+            loadOp: "clear",
+            storeOp: "store",
+          },
+        ],
+      }
+    );
+
+    dispatchRenderPass(commandEncoder, bloomPassPipeline, bloomPassBindGroup, {
+      label: "bloom filter pass",
+      colorAttachments: [
+        {
+          view: context.getCurrentTexture().createView(),
+          clearValue: [0.3, 0.3, 0.3, 1],
+          loadOp: "clear",
+          storeOp: "store",
+        },
+      ],
+    });
 
     device.queue.submit([commandEncoder.finish()]);
 
@@ -331,7 +532,22 @@ async function initialize(
   render();
 }
 
-async function createRenderPipeline(label, device, shaderCode, format) {
+async function createRenderPipeline(
+  label,
+  device,
+  shaderCode,
+  format,
+  fsEntryPoint
+) {
+  const vertexShaderCode = DEBUG
+    ? await fetch("src/shader/vertex.wgsl").then((res) => res.text())
+    : MINIFIED_VERTEX_SHADER;
+
+  const vertexShaderModule = device.createShaderModule({
+    label: `${label} vertex shader`,
+    code: vertexShaderCode,
+  });
+
   const shaderModule = device.createShaderModule({
     label: `${label} shader`,
     code: shaderCode,
@@ -341,12 +557,12 @@ async function createRenderPipeline(label, device, shaderCode, format) {
     label: `${label} render pipeline`,
     layout: "auto",
     vertex: {
-      module: shaderModule,
+      module: vertexShaderModule,
       entryPoint: "vs",
     },
     fragment: {
       module: shaderModule,
-      entryPoint: "fs",
+      entryPoint: fsEntryPoint,
       targets: [{ format }],
     },
     primitive: {
@@ -417,17 +633,5 @@ async function main() {
   const { audioCtx, analyser } = setupAudio();
   analyser.fftSize = 256;
 
-  const mainShaderCode = DEBUG
-    ? await fetch("src/shader/main.wgsl").then((res) => res.text())
-    : MINIFIED_SHADER;
-
-  const effectShaderCode = DEBUG
-    ? await fetch("src/shader/effect.wgsl").then((res) => res.text())
-    : MINIFIED_EFFECT_SHADER;
-
-  const computeShaderCode = DEBUG
-    ? await fetch("src/shader/compute.wgsl").then((res) => res.text())
-    : MINIFIED_COMPUTE_SHADER;
-
-  initialize(mainShaderCode, effectShaderCode, computeShaderCode, analyser);
+  initialize(analyser);
 }
