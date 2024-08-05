@@ -1,3 +1,8 @@
+struct Uniforms {
+    background: f32,
+    edges: f32,
+};
+
 @vertex
 fn vs(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
     let pos = array(
@@ -19,6 +24,7 @@ fn vs(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
 @group(0) @binding(1) var asciiTexture: texture_2d<f32>;
 @group(0) @binding(2) var edgesTexture: texture_2d<f32>;
 @group(0) @binding(3) var sobelTexture: texture_2d<f32>;
+@group(0) @binding(4) var<uniform> uniforms: Uniforms;
 
 @fragment
 fn fs(@builtin(position) FragCoord: vec4<f32>) -> @location(0) vec4f {
@@ -36,7 +42,7 @@ fn fs(@builtin(position) FragCoord: vec4<f32>) -> @location(0) vec4f {
     let isEdge = sobel.y == 1.0;
 
     if !isEdge {
-        return 0.5 * color + asciiPixel * color;
+        return uniforms.background * color + asciiPixel * color;
     }
 
     let mostCommonDirection = u32(round(sobel.x * 8.0));
@@ -66,5 +72,5 @@ fn fs(@builtin(position) FragCoord: vec4<f32>) -> @location(0) vec4f {
         vec2(edge + i32(FragCoord.x % 8),
         i32(FragCoord.y % 8)), 0);
 
-    return 0.5 * color + edgePixel * color;
+    return uniforms.background * color + edgePixel * color;
 }

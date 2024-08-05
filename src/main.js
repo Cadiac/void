@@ -21,6 +21,10 @@ const state = {
     offset: 22,
     beat: 0,
   },
+  ascii: {
+    edges: 0.1,
+    background: 0.5,
+  },
   camera: {
     position: {
       x: -20.9,
@@ -112,6 +116,11 @@ async function initialize(
     ],
   });
 
+  const asciiUniformsBuffer = device.createBuffer({
+    size: 2 * 4,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
   const computePipeline = await createComputePipeline(
     "compute",
     device,
@@ -134,6 +143,7 @@ async function initialize(
     entries: [
       { binding: 0, resource: texture.createView() },
       { binding: 1, resource: sobelTexture.createView() },
+      { binding: 2, resource: { buffer: asciiUniformsBuffer } },
     ],
   });
 
@@ -184,6 +194,7 @@ async function initialize(
       { binding: 1, resource: asciiTexture.createView() },
       { binding: 2, resource: edgesTexture.createView() },
       { binding: 3, resource: sobelTexture.createView() },
+      { binding: 4, resource: { buffer: asciiUniformsBuffer } },
     ],
   });
 
@@ -205,33 +216,41 @@ async function initialize(
   }
 
   function updateUniforms() {
-    const data = new Float32Array([
-      state.camera.position.x,
-      state.camera.position.y,
-      state.camera.position.z,
+    device.queue.writeBuffer(
+      uniformBuffer,
       0,
+      new Float32Array([
+        state.camera.position.x,
+        state.camera.position.y,
+        state.camera.position.z,
+        0,
 
-      state.camera.target.x,
-      state.camera.target.y,
-      state.camera.target.z,
-      0,
+        state.camera.target.x,
+        state.camera.target.y,
+        state.camera.target.z,
+        0,
 
-      canvas.width,
-      canvas.height,
-      0,
-      0,
+        canvas.width,
+        canvas.height,
+        0,
+        0,
 
-      state.sun.position.x,
-      state.sun.position.y,
-      state.sun.position.z,
-      0,
+        state.sun.position.x,
+        state.sun.position.y,
+        state.sun.position.z,
+        0,
 
-      state.now,
+        state.now,
+        0,
+        0,
+        0,
+      ])
+    );
+    device.queue.writeBuffer(
+      asciiUniformsBuffer,
       0,
-      0,
-      0,
-    ]);
-    device.queue.writeBuffer(uniformBuffer, 0, data);
+      new Float32Array([state.ascii.background, state.ascii.edges])
+    );
   }
 
   function render() {

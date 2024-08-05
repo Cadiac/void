@@ -20,6 +20,10 @@ function setup(state) {
   cameraFolder.add(state.camera.target, "y", -50, 50, 0.1).listen();
   cameraFolder.add(state.camera.target, "z", -50, 50, 0.1).listen();
 
+  const asciiFolder = gui.addFolder("Ascii");
+  asciiFolder.add(state.ascii, "background", 0, 1, 0.01).listen();
+  asciiFolder.add(state.ascii, "edges", 0, 1, 0.01).listen();
+
   fps.setup();
 }
 

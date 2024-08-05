@@ -37,7 +37,7 @@ struct Uniforms {
     camera: Camera,
     resolution: vec2<f32>,
     sun: Light,
-    time: f32
+    time: f32,
 };
 
 struct Surface {
