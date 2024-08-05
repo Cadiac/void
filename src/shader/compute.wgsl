@@ -1,6 +1,8 @@
 struct Uniforms {
-    background: f32,
-    edges: f32,
+    _background: f32,
+    threshold: f32,
+    _fill: f32,
+    _edges: f32,
 };
 
 @group(0) @binding(0) var frameTexture: texture_2d<f32>;
@@ -50,7 +52,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let angle: f32 = atan2(y, x);
     let normalizedAngle: f32 = (angle + 3.14159265) / (2.0 * 3.14159265);
 
-    if magnitude >= uniforms.edges {
+    if magnitude >= uniforms.threshold {
         let directionIndex: u32 = u32(((normalizedAngle + 1.0 / 16.0) % 1.0) * 8.0);
         atomicAdd(&sharedDirectionCounts[directionIndex], 1u);
     }

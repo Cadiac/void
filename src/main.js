@@ -22,8 +22,10 @@ const state = {
     beat: 0,
   },
   ascii: {
-    edges: 0.1,
     background: 0.5,
+    threshold: 0.1,
+    fill: 1.0,
+    edges: 1.0,
   },
   camera: {
     position: {
@@ -117,7 +119,7 @@ async function initialize(
   });
 
   const asciiUniformsBuffer = device.createBuffer({
-    size: 2 * 4,
+    size: 4 * 4,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
@@ -249,7 +251,12 @@ async function initialize(
     device.queue.writeBuffer(
       asciiUniformsBuffer,
       0,
-      new Float32Array([state.ascii.background, state.ascii.edges])
+      new Float32Array([
+        state.ascii.background,
+        state.ascii.threshold,
+        state.ascii.fill,
+        state.ascii.edges,
+      ])
     );
   }
 

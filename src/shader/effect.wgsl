@@ -1,5 +1,7 @@
 struct Uniforms {
     background: f32,
+    _threshold: f32,
+    fill: f32,
     edges: f32,
 };
 
@@ -42,7 +44,9 @@ fn fs(@builtin(position) FragCoord: vec4<f32>) -> @location(0) vec4f {
     let isEdge = sobel.y == 1.0;
 
     if !isEdge {
-        return uniforms.background * color + asciiPixel * color;
+        return uniforms.background * color +
+            asciiPixel * color * uniforms.fill +
+            asciiPixel * (1 - uniforms.fill);
     }
 
     let mostCommonDirection = u32(round(sobel.x * 8.0));
@@ -72,5 +76,7 @@ fn fs(@builtin(position) FragCoord: vec4<f32>) -> @location(0) vec4f {
         vec2(edge + i32(FragCoord.x % 8),
         i32(FragCoord.y % 8)), 0);
 
-    return uniforms.background * color + edgePixel * color;
+    return uniforms.background * color +
+        edgePixel * color * uniforms.edges +
+        edgePixel * (1 - uniforms.edges);
 }
