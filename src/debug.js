@@ -26,6 +26,14 @@ function setup(state) {
   asciiFolder.add(state.ascii, "fill", 0, 2, 0.01).listen();
   asciiFolder.add(state.ascii, "edges", 0, 2, 0.01).listen();
 
+  const bloomFolder = gui.addFolder("Bloom");
+  bloomFolder.add(state.bloom, "threshold", 0, 1, 0.01).listen();
+  bloomFolder.add(state.bloom.color, "red", 0, 2, 0.01).listen();
+  bloomFolder.add(state.bloom.color, "green", 0, 2, 0.01).listen();
+  bloomFolder.add(state.bloom.color, "blue", 0, 2, 0.01).listen();
+  bloomFolder.add(state.bloom, "burn", 0, 1, 1).listen();
+  bloomFolder.add(state.bloom, "amplify", 0, 1, 0.01).listen();
+
   fps.setup();
 }
 

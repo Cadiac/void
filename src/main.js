@@ -27,6 +27,16 @@ const state = {
     fill: 1.4,
     edges: 0.89,
   },
+  bloom: {
+    threshold: 0.8,
+    color: {
+      red: 0.8,
+      green: 0.8,
+      blue: 0.8,
+    },
+    burn: 1,
+    amplify: 0.5,
+  },
   camera: {
     position: {
       x: -20.9,
@@ -233,6 +243,11 @@ async function initialize(analyser) {
     minFilter: "linear",
   });
 
+  const bloomUniformsBuffer = device.createBuffer({
+    size: 2 * 4 * 4,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
   const brightnessShaderCode = DEBUG
     ? await fetch("src/shader/brightness.wgsl").then((res) => res.text())
     : MINIFIED_BRIGHTNESS_SHADER;
@@ -261,6 +276,7 @@ async function initialize(analyser) {
     entries: [
       { binding: 0, resource: sampler },
       { binding: 1, resource: asciiPassTexture.createView() },
+      { binding: 2, resource: { buffer: bloomUniformsBuffer } },
     ],
   });
 
@@ -348,6 +364,7 @@ async function initialize(analyser) {
       { binding: 0, resource: asciiPassTexture.createView() },
       { binding: 1, resource: verticalBlurPassTexture.createView() },
       { binding: 2, resource: sampler },
+      { binding: 3, resource: { buffer: bloomUniformsBuffer } },
     ],
   });
 
@@ -407,6 +424,20 @@ async function initialize(analyser) {
         state.ascii.threshold,
         state.ascii.fill,
         state.ascii.edges,
+      ])
+    );
+    device.queue.writeBuffer(
+      bloomUniformsBuffer,
+      0,
+      new Float32Array([
+        state.bloom.threshold,
+        state.bloom.burn,
+        state.bloom.amplify,
+        0,
+        state.bloom.color.red,
+        state.bloom.color.green,
+        state.bloom.color.blue,
+        0,
       ])
     );
   }
