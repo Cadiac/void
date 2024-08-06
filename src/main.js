@@ -17,6 +17,14 @@ const state = {
   now: 0,
   dt: 0,
   lastRenderTime: 0,
+  keyboard: {
+    forward: false,
+    back: false,
+    left: false,
+    right: false,
+    up: false,
+    down: false,
+  },
   audio: {
     offset: 22,
     beat: 0,
@@ -66,18 +74,73 @@ if (AUDIO) {
   window.onload = main;
 }
 
-document.addEventListener(
-  "keydown",
-  (e) => {
-    if (e.key === "Escape") {
-      state.halt = !state.halt;
-      audioCtx.close();
-    }
-  },
-  true
-);
+async function initialize(analyser, audioCtx) {
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      switch (e.key) {
+        case "Escape":
+          state.halt = !state.halt;
+          audioCtx.close();
+          break;
+        case "Shift":
+          state.keyboard.down = true;
+          break;
+        case " ":
+          state.keyboard.up = true;
+          break;
+        case "w":
+        case "W":
+          state.keyboard.forward = true;
+          break;
+        case "s":
+        case "S":
+          state.keyboard.back = true;
+          break;
+        case "a":
+        case "A":
+          state.keyboard.left = true;
+          break;
+        case "d":
+        case "D":
+          state.keyboard.right = true;
+          break;
+      }
+    },
+    true
+  );
 
-async function initialize(analyser) {
+  document.addEventListener(
+    "keyup",
+    (e) => {
+      switch (e.key) {
+        case "Shift":
+          state.keyboard.down = false;
+          break;
+        case " ":
+          state.keyboard.up = false;
+          break;
+        case "w":
+        case "W":
+          state.keyboard.forward = false;
+          break;
+        case "s":
+        case "S":
+          state.keyboard.back = false;
+          break;
+        case "a":
+        case "A":
+          state.keyboard.left = false;
+          break;
+        case "d":
+        case "D":
+          state.keyboard.right = false;
+          break;
+      }
+    },
+    true
+  );
+
   const fftDataArray = new Uint8Array(analyser.frequencyBinCount);
 
   const adapter = await navigator.gpu.requestAdapter();
@@ -376,8 +439,64 @@ async function initialize(analyser) {
       fps.update(dt);
     }
 
+    updateCamera(dt);
     updateFFT();
     updateUniforms();
+  }
+
+  function updateCamera(dt) {
+    const direction = {
+      x: state.camera.target.x - state.camera.position.x,
+      y: state.camera.target.y - state.camera.position.y,
+      z: state.camera.target.z - state.camera.position.z,
+    };
+
+    const magnitude = Math.hypot(direction.x, direction.y, direction.z);
+
+    const normalized = {
+      x: direction.x / magnitude,
+      y: direction.y / magnitude,
+      z: direction.z / magnitude,
+    };
+
+    const SPEED = 5.0;
+
+    // matikka on päin vittua, mutta mitä sitten
+    if (state.keyboard.forward) {
+      state.camera.position.x += normalized.x * dt * SPEED;
+      state.camera.position.y += normalized.y * dt * SPEED;
+      state.camera.position.z += normalized.z * dt * SPEED;
+    }
+
+    if (state.keyboard.back) {
+      state.camera.position.x -= normalized.x * dt * SPEED;
+      state.camera.position.y -= normalized.y * dt * SPEED;
+      state.camera.position.z -= normalized.z * dt * SPEED;
+    }
+
+    if (state.keyboard.left) {
+      state.camera.position.x += normalized.z * dt * SPEED;
+      state.camera.position.y += normalized.y * dt * SPEED;
+      state.camera.position.z += -normalized.x * dt * SPEED;
+    }
+
+    if (state.keyboard.right) {
+      state.camera.position.x -= normalized.z * dt * SPEED;
+      state.camera.position.y -= normalized.y * dt * SPEED;
+      state.camera.position.z -= -normalized.x * dt * SPEED;
+    }
+
+    if (state.keyboard.up) {
+      state.camera.position.x -= normalized.y * dt * SPEED;
+      state.camera.position.y -= -normalized.x * dt * SPEED;
+      state.camera.position.z -= normalized.z * dt * SPEED;
+    }
+
+    if (state.keyboard.down) {
+      state.camera.position.x += normalized.y * dt * SPEED;
+      state.camera.position.y += -normalized.x * dt * SPEED;
+      state.camera.position.z += normalized.z * dt * SPEED;
+    }
   }
 
   function updateFFT() {
@@ -654,6 +773,10 @@ async function loadImageBitmap(url) {
 }
 
 async function main() {
+  if (state.now > 0) {
+    return;
+  }
+
   if (DEBUG) {
     if (!navigator.gpu) {
       alert("WebGPU support is required. Try running this with Google Chrome!");
@@ -661,8 +784,8 @@ async function main() {
     debug.setup(state);
   }
 
-  const { audioCtx, analyser } = setupAudio();
+  const { analyser, audioCtx } = setupAudio();
   analyser.fftSize = 256;
 
-  initialize(analyser);
+  initialize(analyser, audioCtx);
 }

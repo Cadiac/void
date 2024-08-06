@@ -15,9 +15,23 @@ wasm-opt --enable-bulk-memory \
     -O tmp/song.wasm \
     -o tmp/song_optimized.wasm
 
-wgslminify -e vertexMain,fragmentMain,myVariable src/shader/shader.wgsl > tmp/shader.min.wgsl
+wgslminify -e vs src/shader/vertex.wgsl > tmp/vertex.min.wgsl
+wgslminify -e fs src/shader/raymarch.wgsl > tmp/raymarch.min.wgsl
+wgslminify -e main src/shader/sobel.wgsl > tmp/sobel.min.wgsl
+wgslminify -e fs src/shader/ascii.wgsl > tmp/ascii.min.wgsl
+wgslminify -e fs src/shader/brightness.wgsl > tmp/brightness.min.wgsl
+wgslminify -e horizontal_blur,vertical_blur src/shader/blur.wgsl > tmp/blur.min.wgsl
+wgslminify -e fs src/shader/bloom.wgsl > tmp/bloom.min.wgsl
 
-DEBUG=false MINIFIED_SHADER=$(cat tmp/shader.min.wgsl) npx rollup --config rollup.config.mjs
+DEBUG=false \
+    MINIFIED_VERTEX_SHADER=$(cat tmp/vertex.min.wgsl) \
+    MINIFIED_RAYMARCH_SHADER=$(cat tmp/raymarch.min.wgsl) \
+    MINIFIED_SOBEL_SHADER=$(cat tmp/sobel.min.wgsl) \
+    MINIFIED_ASCII_SHADER=$(cat tmp/ascii.min.wgsl) \
+    MINIFIED_BRIGHTNESS_SHADER=$(cat tmp/brightness.min.wgsl) \
+    MINIFIED_BLUR_SHADER=$(cat tmp/blur.min.wgsl) \
+    MINIFIED_BLOOM_SHADER=$(cat tmp/bloom.min.wgsl) \
+    npx rollup --config rollup.config.mjs
 
 java -jar tools/closure-compiler/closure-compiler-v20231112.jar \
     -O ADVANCED \
