@@ -1,14 +1,12 @@
 /**
- * @fileoverview Global variables for audio_sointu.js and dat.gui
+ * @fileoverview Extern definitions for dat.GUI library and WebGPU usage.
  * @externs
  */
 
 /** @const */
 var dat = {};
 
-/**
- * @constructor
- */
+/** @constructor */
 dat.GUI = function () {};
 
 /**
@@ -47,7 +45,7 @@ obj.exports.m.buffer;
 obj.exports.s;
 obj.exports.l;
 
-// Partial Webgpu support by introducing a whole bunch of externs:
+// --- WebGPU support ---
 
 /** @const */
 const GPUTextureUsage = {
@@ -72,17 +70,19 @@ const GPUBufferUsage = {
   QUERY_RESOLVE: 0,
 };
 
+// --- GPUContextConfiguration ---
+
 /** @record */
 function GPUContextConfiguration() {}
 
 /** @type {Object} */
 GPUContextConfiguration.prototype.device;
-
 /** @type {string} */
 GPUContextConfiguration.prototype.format;
-
 /** @type {string} */
 GPUContextConfiguration.prototype.alphaMode;
+
+// --- GPUQueue ---
 
 /** @constructor */
 var GPUQueue = function () {};
@@ -92,7 +92,6 @@ var GPUQueue = function () {};
  * @param {!Array<!GPUCommandBuffer>} commandBuffers An array of command buffers.
  */
 GPUQueue.prototype.submit = function (commandBuffers) {};
-
 /**
  * Writes data to a buffer.
  * @param {GPUBuffer} buffer The buffer to write to.
@@ -108,7 +107,6 @@ GPUQueue.prototype.writeBuffer = function (
   dataOffset,
   size
 ) {};
-
 /**
  * Copies the external image to a texture.
  * @param {Object} source The external image source (e.g., HTMLVideoElement, HTMLCanvasElement, ImageBitmap).
@@ -121,12 +119,18 @@ GPUQueue.prototype.copyExternalImageToTexture = function (
   copySize
 ) {};
 
+// --- GPUImageCopyTextureTagged ---
+
 var GPUImageCopyTextureTagged = function () {};
 
 GPUImageCopyTextureTagged.prototype.texture;
 
+// --- GPUCommandBuffer ---
+
 /** @constructor */
 var GPUCommandBuffer = function () {};
+
+// --- GPUDevice ---
 
 /** @constructor */
 var GPUDevice = function () {};
@@ -136,46 +140,225 @@ var GPUDevice = function () {};
  * @type {GPUQueue}
  */
 GPUDevice.prototype.queue;
-
 /** @type {function(!Object): !GPUTexture} */
 GPUDevice.prototype.createTexture;
-
 /** @type {function(!Object): !GPUBuffer} */
 GPUDevice.prototype.createBuffer;
-
 /** @type {function(!Object): !GPUSampler} */
 GPUDevice.prototype.createSampler;
-
 /** @type {function(!Object): !GPUQuerySet} */
 GPUDevice.prototype.createQuerySet;
-
 /**
  * Creates a bind group.
  * @param {GPUBindGroupDescriptor} bindGroupDescriptor The descriptor for the bind group.
  * @return {GPUBindGroup}
  */
 GPUDevice.prototype.createBindGroup = function (bindGroupDescriptor) {};
+/** @type {function(!Object): !GPUBindGroupLayout} */
+GPUDevice.prototype.createBindGroupLayout;
+/** @type {function(!Object): !GPUPipelineLayout} */
+GPUDevice.prototype.createPipelineLayout;
+/**
+ * Creates a shader module.
+ * @param {!Object} descriptor The descriptor for the shader module.
+ * @return {GPUShaderModule}
+ */
+GPUDevice.prototype.createShaderModule = function (descriptor) {};
+/**
+ * Creates an asynchronous render pipeline.
+ * @param {!GPURenderPipelineDescriptor} descriptor The descriptor for the render pipeline.
+ * @return {GPURenderPipeline}
+ */
+GPUDevice.prototype.createRenderPipelineAsync = function (descriptor) {};
+/**
+ * Creates a compute pipeline.
+ * @param {GPUComputePipelineDescriptor} descriptor The descriptor for the compute pipeline.
+ * @return {GPUComputePipeline}
+ */
+GPUDevice.prototype.createComputePipeline = function (descriptor) {};
+/**
+ * Creates a command encoder.
+ * @param {!Object=} descriptor Optional descriptor for the command encoder.
+ * @return {GPUCommandEncoder}
+ */
+GPUDevice.prototype.createCommandEncoder = function (descriptor) {};
+
+// --- GPUBindGroupDescriptor ---
 
 /** @constructor */
-var GPUBindGroupDescriptor = function () {};
+var GPUBindGroupDescriptor = {};
 
 /** @type {string} */
 GPUBindGroupDescriptor.prototype.label;
-
 /** @type {GPUBindGroupLayout} */
 GPUBindGroupDescriptor.prototype.layout;
-
 /** @type {!Array<!GPUBindGroupEntry>} */
 GPUBindGroupDescriptor.prototype.entries;
+
+// --- GPUBindGroupEntry ---
 
 /** @constructor */
 var GPUBindGroupEntry = function () {};
 
 /** @type {number} */
 GPUBindGroupEntry.prototype.binding;
-
 /** @type {GPUResource} */
 GPUBindGroupEntry.prototype.resource;
+
+// --- GPUBufferBinding ---
+
+/** @constructor */
+var GPUBufferBinding = function () {};
+
+/** @type {GPUBuffer} */
+GPUBufferBinding.prototype.buffer;
+
+// --- GPUComputePipelineDescriptor ---
+
+/** @constructor */
+var GPUComputePipelineDescriptor = function () {};
+
+/** @type {string} */
+GPUComputePipelineDescriptor.prototype.label;
+/** @type {GPUPipelineLayout|string} */
+GPUComputePipelineDescriptor.prototype.layout;
+/** @type {GPUProgrammableStageDescriptor} */
+GPUComputePipelineDescriptor.prototype.compute;
+
+// --- GPURenderPipeline ---
+
+/** @constructor */
+var GPURenderPipeline = function () {};
+
+/**
+ * Retrieves a bind group layout.
+ * @param {number} index The index of the bind group layout.
+ * @return {GPUBindGroupLayout}
+ */
+GPURenderPipeline.prototype.getBindGroupLayout = function (index) {};
+
+// --- GPURenderPipelineDescriptor ---
+
+/** @constructor */
+var GPURenderPipelineDescriptor = function () {};
+
+/** @type {string} */
+GPURenderPipelineDescriptor.prototype.label;
+/** @type {GPUProgrammableStageDescriptor} */
+GPURenderPipelineDescriptor.prototype.vertex;
+/** @type {GPUProgrammableStageDescriptor} */
+GPURenderPipelineDescriptor.prototype.fragment;
+/** @type {GPUPipelineLayout} */
+GPURenderPipelineDescriptor.prototype.layout;
+/** @type {GPUPrimitiveState} */
+GPURenderPipelineDescriptor.prototype.primitive;
+/** @type {GPUDepthStencilState} */
+GPURenderPipelineDescriptor.prototype.depthStencil;
+/** @type {GPUMultisampleState} */
+GPURenderPipelineDescriptor.prototype.multisample;
+/** @type {GPURasterizationStateDescriptor} */
+GPURenderPipelineDescriptor.prototype.rasterization;
+
+// --- GPUProgrammableStageDescriptor ---
+
+/** @constructor */
+var GPUProgrammableStageDescriptor = function () {};
+
+/** @type {GPUShaderModule} */
+GPUProgrammableStageDescriptor.prototype.module;
+/** @type {string} */
+GPUProgrammableStageDescriptor.prototype.entryPoint;
+/** @type {!Array<!GPURenderPipelineColorTargetState>} */
+GPUProgrammableStageDescriptor.prototype.targets;
+
+// --- GPURenderPipelineColorTargetState ---
+
+/** @constructor */
+var GPURenderPipelineColorTargetState = function () {};
+
+/** @type {string} */
+GPURenderPipelineColorTargetState.prototype.format;
+
+// --- GPUPrimitiveState ---
+
+/** @constructor */
+var GPUPrimitiveState = function () {};
+
+/** @type {string} */
+GPUPrimitiveState.prototype.topology;
+
+// --- GPUCommandEncoder ---
+
+/** @constructor */
+var GPUCommandEncoder = function () {};
+
+/**
+ * Begins a render pass.
+ * @param {GPURenderPassDescriptor} renderPassDescriptor The descriptor for the render pass.
+ * @return {GPURenderPassEncoder}
+ */
+GPUCommandEncoder.prototype.beginRenderPass = function (
+  renderPassDescriptor
+) {};
+/**
+ * Begins a compute pass.
+ * @return {GPUComputePassEncoder}
+ */
+GPUCommandEncoder.prototype.beginComputePass = function () {};
+/**
+ * Finishes encoding the commands.
+ * @param {!Object=} options Optional options for finishing the command buffer.
+ * @return {GPUCommandBuffer}
+ */
+GPUCommandEncoder.prototype.finish = function (options) {};
+
+// --- GPURenderPassDescriptor ---
+
+/** @constructor */
+var GPURenderPassDescriptor = function () {};
+
+/** @type {string} */
+GPURenderPassDescriptor.prototype.label;
+/** @type {!Array<!GPURenderPassColorAttachmentDescriptor>} */
+GPURenderPassDescriptor.prototype.colorAttachments;
+
+// --- GPURenderPassColorAttachmentDescriptor ---
+
+/** @constructor */
+var GPURenderPassColorAttachmentDescriptor = function () {};
+
+/** @type {GPUTextureView} */
+GPURenderPassColorAttachmentDescriptor.prototype.view;
+/** @type {!Array<number>} */
+GPURenderPassColorAttachmentDescriptor.prototype.clearValue;
+/** @type {string} */
+GPURenderPassColorAttachmentDescriptor.prototype.loadOp;
+/** @type {string} */
+GPURenderPassColorAttachmentDescriptor.prototype.storeOp;
+
+// ---f GPURenderPassEncoder ---
+
+/** @constructor */
+var GPURenderPassEncoder = function () {};
+
+GPURenderPassEncoder.prototype.setPipeline = function (pipeline) {};
+GPURenderPassEncoder.prototype.setBindGroup = function (id, bindGroup) {};
+GPURenderPassEncoder.prototype.draw = function (a, b, c, d) {};
+GPURenderPassEncoder.prototype.end = function () {};
+
+// --- GPUComputePassEncoder ---
+
+var GPUComputePassEncoder = function () {};
+
+GPUComputePassEncoder.prototype.setPipeline = function (pipeline) {};
+GPUComputePassEncoder.prototype.setBindGroup = function (id, bindGroup) {};
+GPUComputePassEncoder.prototype.dispatchWorkgroups = function (a, b) {};
+GPUComputePassEncoder.prototype.end = function () {};
+
+// --- Miscallenous ---
+
+/** @constructor */
+var GPUBuffer = function () {};
 
 /** @constructor */
 var GPUBindGroup = function () {};
@@ -190,122 +373,13 @@ var GPUTextureView = function () {};
 var GPUSampler = function () {};
 
 /** @constructor */
-var GPUBufferBinding = function () {};
-
-/** @type {GPUBuffer} */
-GPUBufferBinding.prototype.buffer;
-
-/** @constructor */
-var GPUBuffer = function () {};
-
-/** @type {function(!Object): !GPUBindGroupLayout} */
-GPUDevice.prototype.createBindGroupLayout;
-
-/** @type {function(!Object): !GPUPipelineLayout} */
-GPUDevice.prototype.createPipelineLayout;
-
-/**
- * Creates a shader module.
- * @param {!Object} descriptor The descriptor for the shader module.
- * @return {GPUShaderModule}
- */
-GPUDevice.prototype.createShaderModule = function (descriptor) {};
-
-/**
- * Creates an asynchronous render pipeline.
- * @param {!GPURenderPipelineDescriptor} descriptor The descriptor for the render pipeline.
- * @return {GPURenderPipeline}
- */
-GPUDevice.prototype.createRenderPipelineAsync = function (descriptor) {};
-
-/**
- * Creates a compute pipeline.
- * @param {GPUComputePipelineDescriptor} descriptor The descriptor for the compute pipeline.
- * @return {GPUComputePipeline}
- */
-GPUDevice.prototype.createComputePipeline = function (descriptor) {};
-
-/** @constructor */
 var GPUComputePipeline = function () {};
-
-/** @constructor */
-var GPUComputePipelineDescriptor = function () {};
-
-/** @type {string} */
-GPUComputePipelineDescriptor.prototype.label;
-
-/** @type {GPUPipelineLayout|string} */
-GPUComputePipelineDescriptor.prototype.layout;
-
-/** @type {GPUProgrammableStageDescriptor} */
-GPUComputePipelineDescriptor.prototype.compute;
-
-/** @constructor */
-var GPURenderPipeline = function () {};
-
-/**
- * Retrieves a bind group layout.
- * @param {number} index The index of the bind group layout.
- * @return {GPUBindGroupLayout}
- */
-GPURenderPipeline.prototype.getBindGroupLayout = function (index) {};
-
-/** @constructor */
-var GPURenderPipelineDescriptor = function () {};
-
-/** @type {string} */
-GPURenderPipelineDescriptor.prototype.label;
-
-/** @type {GPUProgrammableStageDescriptor} */
-GPURenderPipelineDescriptor.prototype.vertex;
-
-/** @type {GPUProgrammableStageDescriptor} */
-GPURenderPipelineDescriptor.prototype.fragment;
-
-/** @type {GPUPipelineLayout} */
-GPURenderPipelineDescriptor.prototype.layout;
-
-/** @type {GPUPrimitiveState} */
-GPURenderPipelineDescriptor.prototype.primitive;
-
-/** @type {GPUDepthStencilState} */
-GPURenderPipelineDescriptor.prototype.depthStencil;
-
-/** @type {GPUMultisampleState} */
-GPURenderPipelineDescriptor.prototype.multisample;
-
-/** @type {GPURasterizationStateDescriptor} */
-GPURenderPipelineDescriptor.prototype.rasterization;
-
-/** @constructor */
-var GPUProgrammableStageDescriptor = function () {};
-
-/** @type {GPUShaderModule} */
-GPUProgrammableStageDescriptor.prototype.module;
-
-/** @type {string} */
-GPUProgrammableStageDescriptor.prototype.entryPoint;
-
-/** @type {!Array<!GPURenderPipelineColorTargetState>} */
-GPUProgrammableStageDescriptor.prototype.targets;
-
-/** @constructor */
-var GPURenderPipelineColorTargetState = function () {};
-
-/** @type {string} */
-GPURenderPipelineColorTargetState.prototype.format;
 
 /** @constructor */
 var GPUBindGroupLayout = function () {};
 
 /** @constructor */
 var GPUPipelineLayout = function () {};
-
-/** @constructor */
-var GPUPrimitiveState = function () {};
-
-/** @type {string} */
-GPUPrimitiveState.prototype.topology;
 
 /** @constructor */
 var GPUDepthStencilState = function () {};
@@ -319,77 +393,6 @@ var GPURasterizationStateDescriptor = function () {};
 /** @constructor */
 var GPUShaderModule = function () {};
 
-/**
- * Creates a command encoder.
- * @param {!Object=} descriptor Optional descriptor for the command encoder.
- * @return {GPUCommandEncoder}
- */
-GPUDevice.prototype.createCommandEncoder = function (descriptor) {};
-
-/** @constructor */
-var GPUCommandEncoder = function () {};
-
-/**
- * Begins a render pass.
- * @param {GPURenderPassDescriptor} renderPassDescriptor The descriptor for the render pass.
- * @return {GPURenderPassEncoder}
- */
-GPUCommandEncoder.prototype.beginRenderPass = function (
-  renderPassDescriptor
-) {};
-
-/**
- * Begins a compute pass.
- * @return {GPUComputePassEncoder}
- */
-GPUCommandEncoder.prototype.beginComputePass = function () {};
-
-/**
- * Finishes encoding the commands.
- * @param {!Object=} options Optional options for finishing the command buffer.
- * @return {GPUCommandBuffer}
- */
-GPUCommandEncoder.prototype.finish = function (options) {};
-
-/** @constructor */
-var GPURenderPassDescriptor = function () {};
-
-/** @type {string} */
-GPURenderPassDescriptor.prototype.label;
-
-/** @type {!Array<!GPURenderPassColorAttachmentDescriptor>} */
-GPURenderPassDescriptor.prototype.colorAttachments;
-
-/** @constructor */
-var GPURenderPassColorAttachmentDescriptor = function () {};
-
-/** @type {GPUTextureView} */
-GPURenderPassColorAttachmentDescriptor.prototype.view;
-
-/** @type {!Array<number>} */
-GPURenderPassColorAttachmentDescriptor.prototype.clearValue;
-
-/** @type {string} */
-GPURenderPassColorAttachmentDescriptor.prototype.loadOp;
-
-/** @type {string} */
-GPURenderPassColorAttachmentDescriptor.prototype.storeOp;
-
-/** @constructor */
-var GPURenderPassEncoder = function () {};
-
-GPURenderPassEncoder.prototype.setPipeline = function (pipeline) {};
-GPURenderPassEncoder.prototype.setBindGroup = function (id, bindGroup) {};
-GPURenderPassEncoder.prototype.draw = function (a, b, c, d) {};
-GPURenderPassEncoder.prototype.end = function () {};
-
-var GPUComputePassEncoder = function () {};
-
-GPUComputePassEncoder.prototype.setPipeline = function (pipeline) {};
-GPUComputePassEncoder.prototype.setBindGroup = function (id, bindGroup) {};
-GPUComputePassEncoder.prototype.dispatchWorkgroups = function (a, b) {};
-GPUComputePassEncoder.prototype.end = function () {};
-
 /** @const */
 var navigator = {};
 
@@ -397,7 +400,6 @@ var navigator = {};
 navigator.gpu = {};
 
 /**
- * Represents a function that requests an adapter.
  * @return {{
  *   requestDevice: function(): GPUDevice
  * }}
@@ -405,7 +407,6 @@ navigator.gpu = {};
 navigator.gpu.requestAdapter = function () {
   return {
     /**
-     * Requests a GPUDevice.
      * @return {GPUDevice}
      */
     requestDevice: function () {
@@ -414,10 +415,7 @@ navigator.gpu.requestAdapter = function () {
   };
 };
 
-/**
- * Gets the preferred canvas format.
- * @return {string}
- */
+/** @return {string} */
 navigator.gpu.getPreferredCanvasFormat = function () {};
 
 /** @const */

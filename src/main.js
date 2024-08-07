@@ -687,7 +687,7 @@ async function createRenderPipeline(
   device,
   shaderCode,
   format,
-  fsEntryPoint
+  fsEntryPoint = "fs"
 ) {
   const vertexShaderCode = DEBUG
     ? await fetch("src/shader/vertex.wgsl").then((res) => res.text())
