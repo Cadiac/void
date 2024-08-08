@@ -24,6 +24,7 @@ wgslminify -e horizontal_blur,vertical_blur src/shader/blur.wgsl > tmp/blur.min.
 wgslminify -e fs src/shader/bloom.wgsl > tmp/bloom.min.wgsl
 
 DEBUG=false \
+    AUDIO=true \
     MINIFIED_VERTEX_SHADER=$(cat tmp/vertex.min.wgsl) \
     MINIFIED_RAYMARCH_SHADER=$(cat tmp/raymarch.min.wgsl) \
     MINIFIED_SOBEL_SHADER=$(cat tmp/sobel.min.wgsl) \

@@ -8,7 +8,6 @@ canvas.style.left = canvas.style.top = 0;
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const AUDIO = true;
 const DEBUG = true;
 
 const state = {
@@ -66,13 +65,9 @@ const state = {
   },
 };
 
-if (AUDIO) {
-  // Mobile support needs a touch handler.
-  // Audio can't run without an user initiated event.
-  loadSointuWasm(canvas, main);
-} else {
-  window.onload = main;
-}
+// Mobile support needs a touch handler.
+// Audio can't run without an user initiated event.
+loadSointuWasm(canvas, main);
 
 async function initialize(analyser, audioCtx) {
   document.addEventListener(
