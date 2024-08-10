@@ -195,20 +195,30 @@ async function initialize(analyser, audioCtx) {
       GPUTextureUsage.COPY_DST |
       GPUTextureUsage.RENDER_ATTACHMENT,
   });
-  device.queue.copyExternalImageToTexture(
-    { source: asciiTextureSource, flipY: false },
-    { texture: asciiTexture },
-    { width: asciiTextureSource.width, height: asciiTextureSource.height }
-  );
+  copySourceToTexture(device, asciiTexture, asciiTextureSource);
+
+  const maskTextureContext = updateMaskTexture(canvas.width, canvas.height, 0);
+  const maskTextureSource = maskTextureContext.canvas;
+  const maskTexture = device.createTexture({
+    label: "mask texture",
+    format,
+    size: [maskTextureSource.width, maskTextureSource.height],
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.COPY_DST |
+      GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+  copySourceToTexture(device, maskTexture, maskTextureSource);
 
   const asciiBindGroup = device.createBindGroup({
     label: "ascii effect bind group",
     layout: asciiRenderPipeline.getBindGroupLayout(0),
     entries: [
       { binding: 0, resource: raymarchPassTexture.createView() },
-      { binding: 1, resource: asciiTexture.createView() },
-      { binding: 2, resource: sobelTexture.createView() },
-      { binding: 3, resource: { buffer: asciiUniformsBuffer } },
+      { binding: 1, resource: maskTexture.createView() },
+      { binding: 2, resource: asciiTexture.createView() },
+      { binding: 3, resource: sobelTexture.createView() },
+      { binding: 4, resource: { buffer: asciiUniformsBuffer } },
     ],
   });
 
@@ -351,6 +361,12 @@ async function initialize(analyser, audioCtx) {
     if (DEBUG) {
       fps.update(dt);
     }
+
+    copySourceToTexture(
+      device,
+      maskTexture,
+      updateMaskTexture(canvas.width, canvas.height, state.now).canvas
+    );
 
     updateCamera(dt);
     updateFFT();
@@ -757,6 +773,56 @@ function createAsciiTexture(characters) {
   }
 
   return ctx;
+}
+
+function updateMaskTexture(width, height, time) {
+  const ctx = document.createElement("canvas").getContext("2d");
+
+  ctx.canvas.width = width;
+  ctx.canvas.height = height;
+
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.fillStyle = "black";
+  ctx.font = "20em bold serif";
+
+  if (time > 10000) {
+    ctx.fillText("GREETINGS TO:", 100 + Math.min(time - 10000, 0), height / 4);
+    ctx.fillText(
+      "IMNEVERSORRY",
+      100 + Math.min(time - 15000, 0),
+      height / 4 + 160
+    );
+    ctx.fillText("PAPU", 100 + Math.min(time - 17000, 0), height / 4 + 160 * 2);
+    ctx.fillText(
+      "PUMPULI",
+      100 + Math.min(time - 18000, 0),
+      height / 4 + 160 * 3
+    );
+    ctx.fillText(
+      "OPOSSUMI",
+      100 + Math.min(time - 20000, 0),
+      height / 4 + 160 * 4
+    );
+  }
+
+  // ctx.fillRect(
+  //   width / 4 + Math.sin(time / 1000) * 100,
+  //   height / 4 + Math.cos(time / 1000) * 100,
+  //   width / 2,
+  //   height / 2
+  // );
+
+  return ctx;
+}
+
+function copySourceToTexture(device, texture, source, flipY = false) {
+  device.queue.copyExternalImageToTexture(
+    { source, flipY },
+    { texture },
+    { width: source.width, height: source.height }
+  );
 }
 
 function dispatchRenderPass(

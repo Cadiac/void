@@ -6,9 +6,10 @@ struct Uniforms {
 };
 
 @group(0) @binding(0) var frameTexture: texture_2d<f32>;
-@group(0) @binding(1) var asciiTexture: texture_2d<f32>;
-@group(0) @binding(2) var sobelTexture: texture_2d<f32>;
-@group(0) @binding(3) var<uniform> uniforms: Uniforms;
+@group(0) @binding(1) var maskTexture: texture_2d<f32>;
+@group(0) @binding(2) var asciiTexture: texture_2d<f32>;
+@group(0) @binding(3) var sobelTexture: texture_2d<f32>;
+@group(0) @binding(4) var<uniform> uniforms: Uniforms;
 
 @fragment
 fn fs(@builtin(position) FragCoord: vec4<f32>) -> @location(0) vec4f {
@@ -17,6 +18,11 @@ fn fs(@builtin(position) FragCoord: vec4<f32>) -> @location(0) vec4f {
 
     let luminance = 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
     let quantized = floor(luminance * 10) / 10;
+
+    let maskPixel = textureLoad(maskTexture, downscale, 0);
+    if maskPixel.x < 0.7 {
+        return textureLoad(frameTexture, vec2i(FragCoord.xy), 0);
+    }
 
     let offset = min(quantized, 0.9) * 80.0;
     let asciiPixel = textureLoad(asciiTexture, vec2(i32(offset + FragCoord.x % 8), i32(FragCoord.y % 8)), 0);
