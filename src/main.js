@@ -118,7 +118,10 @@ async function initialize(analyser, audioCtx) {
 
   // Sobel Filter - Compute shader
 
-  const maskTextureContext = updateMaskTexture(canvas.width, canvas.height, 0);
+  const maskTextureContext = document.createElement("canvas").getContext("2d");
+  maskTextureContext.canvas.width = canvas.width;
+  maskTextureContext.canvas.height = canvas.height;
+
   const maskTextureSource = maskTextureContext.canvas;
   const maskTexture = device.createTexture({
     label: "mask texture",
@@ -129,7 +132,7 @@ async function initialize(analyser, audioCtx) {
       GPUTextureUsage.COPY_DST |
       GPUTextureUsage.RENDER_ATTACHMENT,
   });
-  copySourceToTexture(device, maskTexture, maskTextureSource);
+  // copySourceToTexture(device, maskTexture, maskTextureSource);
 
   const sobelTexture = device.createTexture({
     size: { width: canvas.width, height: canvas.height },
@@ -358,11 +361,7 @@ async function initialize(analyser, audioCtx) {
       fps.update(dt);
     }
 
-    copySourceToTexture(
-      device,
-      maskTexture,
-      updateMaskTexture(canvas.width, canvas.height, state.now).canvas
-    );
+    updateMaskTexture(device, maskTexture, maskTextureContext, state.now);
 
     updateCamera(dt);
     updateFFT();
@@ -771,52 +770,43 @@ function createAsciiTexture(characters) {
   return ctx;
 }
 
-function updateMaskTexture(width, height, time) {
-  const ctx = document.createElement("canvas").getContext("2d");
+function updateMaskTexture(device, maskTexture, ctx, time) {
+  const { width, height } = ctx.canvas;
 
-  ctx.canvas.width = width;
-  ctx.canvas.height = height;
-
-  ctx.fillStyle = "white";
+  ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, width, height);
 
-  ctx.fillStyle = "black";
+  ctx.fillStyle = "#000";
+
+  ctx.fillRect(
+    width / 4 + Math.sin(time / 1000) * 100,
+    height / 4 + Math.cos(time / 1000) * 100,
+    width / 2,
+    height / 2
+  );
+
   ctx.font = "20em bold serif";
 
-  ctx.fillText(
+  const messages = [
     "GREETINGS TO:",
-    100 + Math.sin(time / 50000) * 1000 - 500,
-    height / 4
-  );
-  ctx.fillText(
-    "IMNEVERSORRY",
-    100 + Math.sin((time + 1000) / 5000) * 1000 - 500,
-    height / 4 + 160
-  );
-  ctx.fillText(
-    "PAPU",
-    100 + Math.sin((time + 2000) / 5000) * 1000 - 500,
-    height / 4 + 160 * 2
-  );
-  ctx.fillText(
-    "PUMPULI",
-    100 + Math.sin((time + 3000) / 5000) * 1000 - 500,
-    height / 4 + 160 * 3
-  );
-  ctx.fillText(
-    "OPOSSUMI",
-    100 + Math.sin((time + 4000) / 5000) * 1000 - 500,
-    height / 4 + 160 * 4
-  );
+    "(papu)",
+    "BFlorry",
+    "opossumi",
+    "pumpuli",
+    "imneversorry",
+  ];
 
-  // ctx.fillRect(
-  //   width / 4 + Math.sin(time / 1000) * 100,
-  //   height / 4 + Math.cos(time / 1000) * 100,
-  //   width / 2,
-  //   height / 2
-  // );
+  ctx.fillStyle = "#0f0";
 
-  return ctx;
+  messages.forEach((message, i) => {
+    ctx.fillText(
+      message,
+      100 + Math.sin((time + 1000 * i) / 5000) * 1000 - 500,
+      height / 4 + 160 * (i - 1)
+    );
+  });
+
+  copySourceToTexture(device, maskTexture, ctx.canvas);
 }
 
 function copySourceToTexture(device, texture, source, flipY = false) {

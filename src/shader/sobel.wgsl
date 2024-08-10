@@ -46,7 +46,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             var texel: vec4<f32> = textureLoad(frameTexture, texCoord, 0);
             let maskPixel = textureLoad(maskTexture, texCoord, 0);
 
-            if maskPixel.x < 0.7 {
+            if maskPixel.r < 0.7 {
                 texel = vec4f(0.0);
             }
 
