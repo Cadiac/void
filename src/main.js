@@ -787,14 +787,7 @@ function updateMaskTexture(device, maskTexture, ctx, time) {
 
   ctx.font = "20em bold serif";
 
-  const messages = [
-    "GREETINGS TO:",
-    "(papu)",
-    "BFlorry",
-    "opossumi",
-    "pumpuli",
-    "imneversorry",
-  ];
+  const messages = ["GREETINGS TO:", "LOREM", "IPSUM", "DOLOR", "SIT", "AMET"];
 
   ctx.fillStyle = "#0f0";
 

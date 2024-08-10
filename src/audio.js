@@ -68,9 +68,7 @@ export const setupAudio = () => {
   analyser.connect(audioCtx.destination);
   audio.connect(analyser);
 
-  if (DEBUG) {
-    audio.loop = true;
-  }
+  audio.loop = true;
   audio.start();
 
   return { audioCtx, analyser };
