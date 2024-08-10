@@ -2,11 +2,7 @@ import { loadSointuWasm, setupAudio } from "./audio.js";
 import debug from "./debug.js";
 import fps from "./fps.js";
 
-const canvas = document.createElement("canvas");
-canvas.style.position = "fixed";
-canvas.style.left = canvas.style.top = 0;
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+const canvas = createMainCanvas();
 
 const DEBUG = true;
 
@@ -70,71 +66,7 @@ const state = {
 loadSointuWasm(canvas, main);
 
 async function initialize(analyser, audioCtx) {
-  document.addEventListener(
-    "keydown",
-    (e) => {
-      switch (e.key) {
-        case "Escape":
-          state.halt = !state.halt;
-          audioCtx.close();
-          break;
-        case "Shift":
-          state.keyboard.down = true;
-          break;
-        case " ":
-          state.keyboard.up = true;
-          break;
-        case "w":
-        case "W":
-          state.keyboard.forward = true;
-          break;
-        case "s":
-        case "S":
-          state.keyboard.back = true;
-          break;
-        case "a":
-        case "A":
-          state.keyboard.left = true;
-          break;
-        case "d":
-        case "D":
-          state.keyboard.right = true;
-          break;
-      }
-    },
-    true
-  );
-
-  document.addEventListener(
-    "keyup",
-    (e) => {
-      switch (e.key) {
-        case "Shift":
-          state.keyboard.down = false;
-          break;
-        case " ":
-          state.keyboard.up = false;
-          break;
-        case "w":
-        case "W":
-          state.keyboard.forward = false;
-          break;
-        case "s":
-        case "S":
-          state.keyboard.back = false;
-          break;
-        case "a":
-        case "A":
-          state.keyboard.left = false;
-          break;
-        case "d":
-        case "D":
-          state.keyboard.right = false;
-          break;
-      }
-    },
-    true
-  );
+  setupKeyboardListener(audioCtx);
 
   const fftDataArray = new Uint8Array(analyser.frequencyBinCount);
 
@@ -249,7 +181,8 @@ async function initialize(analyser, audioCtx) {
     format
   );
 
-  const asciiTextureSource = await loadImageBitmap("src/textures/ascii.png");
+  const asciiTextureContext = createAsciiTexture(" .:coePO0■");
+  const asciiTextureSource = asciiTextureContext.canvas;
   const asciiTexture = device.createTexture({
     label: "ascii texture",
     format,
@@ -259,14 +192,14 @@ async function initialize(analyser, audioCtx) {
       GPUTextureUsage.COPY_DST |
       GPUTextureUsage.RENDER_ATTACHMENT,
   });
-
   device.queue.copyExternalImageToTexture(
     { source: asciiTextureSource, flipY: false },
     { texture: asciiTexture },
     { width: asciiTextureSource.width, height: asciiTextureSource.height }
   );
 
-  const edgesTextureSource = await loadImageBitmap("src/textures/edges.png");
+  const edgesTextureContext = createAsciiTexture(" |-/\\");
+  const edgesTextureSource = edgesTextureContext.canvas;
   const edgesTexture = device.createTexture({
     label: "edges texture",
     format,
@@ -677,6 +610,74 @@ async function initialize(analyser, audioCtx) {
   render();
 }
 
+function setupKeyboardListener(audioCtx) {
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      switch (e.key) {
+        case "Escape":
+          state.halt = !state.halt;
+          audioCtx.close();
+          break;
+        case "Shift":
+          state.keyboard.down = true;
+          break;
+        case " ":
+          state.keyboard.up = true;
+          break;
+        case "w":
+        case "W":
+          state.keyboard.forward = true;
+          break;
+        case "s":
+        case "S":
+          state.keyboard.back = true;
+          break;
+        case "a":
+        case "A":
+          state.keyboard.left = true;
+          break;
+        case "d":
+        case "D":
+          state.keyboard.right = true;
+          break;
+      }
+    },
+    true
+  );
+
+  document.addEventListener(
+    "keyup",
+    (e) => {
+      switch (e.key) {
+        case "Shift":
+          state.keyboard.down = false;
+          break;
+        case " ":
+          state.keyboard.up = false;
+          break;
+        case "w":
+        case "W":
+          state.keyboard.forward = false;
+          break;
+        case "s":
+        case "S":
+          state.keyboard.back = false;
+          break;
+        case "a":
+        case "A":
+          state.keyboard.left = false;
+          break;
+        case "d":
+        case "D":
+          state.keyboard.right = false;
+          break;
+      }
+    },
+    true
+  );
+}
+
 async function createRenderPipeline(
   label,
   device,
@@ -732,6 +733,45 @@ async function createComputePipeline(label, device, shaderCode) {
   });
 
   return pipeline;
+}
+
+function createMainCanvas() {
+  const canvas = document.createElement("canvas");
+  canvas.style.position = "fixed";
+  canvas.style.left = canvas.style.top = 0;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  return canvas;
+}
+
+function createAsciiTexture(characters) {
+  const ctx = document.createElement("canvas").getContext("2d");
+
+  const width = 8 * characters.length;
+  const height = 8;
+  ctx.canvas.width = width;
+  ctx.canvas.height = height;
+  ctx.canvas.style["image-rendering"] = "pixelated";
+
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.fillStyle = "white";
+  ctx.font = "8px monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  ctx.imageSmoothingEnabled = false;
+
+  const charWidth = width / characters.length;
+  const halfCharWidth = charWidth / 2;
+
+  for (let i = 0; i < characters.length; i++) {
+    const x = i * charWidth + halfCharWidth;
+    ctx.fillText(characters[i], x, height / 2 + 1);
+  }
+
+  return ctx;
 }
 
 function dispatchRenderPass(
