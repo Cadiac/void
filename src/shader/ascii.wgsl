@@ -21,7 +21,7 @@ fn fs(@builtin(position) FragCoord: vec4<f32>) -> @location(0) vec4f {
 
     let maskPixel = textureLoad(maskTexture, downscale, 0);
     if maskPixel.x < 0.7 {
-        return textureLoad(frameTexture, vec2i(FragCoord.xy), 0);
+        return color;
     }
 
     let offset = min(quantized, 0.9) * 80.0;

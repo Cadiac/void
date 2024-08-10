@@ -113,15 +113,23 @@ async function initialize(analyser, audioCtx) {
   const raymarchPassBindGroup = device.createBindGroup({
     label: "uniforms bind group",
     layout: raymarchPassPipeline.getBindGroupLayout(0),
-    entries: [
-      {
-        binding: 0,
-        resource: { buffer: raymarchUniformsBuffer },
-      },
-    ],
+    entries: [{ binding: 0, resource: { buffer: raymarchUniformsBuffer } }],
   });
 
   // Sobel Filter - Compute shader
+
+  const maskTextureContext = updateMaskTexture(canvas.width, canvas.height, 0);
+  const maskTextureSource = maskTextureContext.canvas;
+  const maskTexture = device.createTexture({
+    label: "mask texture",
+    format,
+    size: [maskTextureSource.width, maskTextureSource.height],
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.COPY_DST |
+      GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+  copySourceToTexture(device, maskTexture, maskTextureSource);
 
   const sobelTexture = device.createTexture({
     size: { width: canvas.width, height: canvas.height },
@@ -153,7 +161,8 @@ async function initialize(analyser, audioCtx) {
     entries: [
       { binding: 0, resource: raymarchPassTexture.createView() },
       { binding: 1, resource: sobelTexture.createView() },
-      { binding: 2, resource: { buffer: asciiUniformsBuffer } },
+      { binding: 2, resource: maskTexture.createView() },
+      { binding: 3, resource: { buffer: asciiUniformsBuffer } },
     ],
   });
 
@@ -196,19 +205,6 @@ async function initialize(analyser, audioCtx) {
       GPUTextureUsage.RENDER_ATTACHMENT,
   });
   copySourceToTexture(device, asciiTexture, asciiTextureSource);
-
-  const maskTextureContext = updateMaskTexture(canvas.width, canvas.height, 0);
-  const maskTextureSource = maskTextureContext.canvas;
-  const maskTexture = device.createTexture({
-    label: "mask texture",
-    format,
-    size: [maskTextureSource.width, maskTextureSource.height],
-    usage:
-      GPUTextureUsage.TEXTURE_BINDING |
-      GPUTextureUsage.COPY_DST |
-      GPUTextureUsage.RENDER_ATTACHMENT,
-  });
-  copySourceToTexture(device, maskTexture, maskTextureSource);
 
   const asciiBindGroup = device.createBindGroup({
     label: "ascii effect bind group",
@@ -787,25 +783,31 @@ function updateMaskTexture(width, height, time) {
   ctx.fillStyle = "black";
   ctx.font = "20em bold serif";
 
-  if (time > 10000) {
-    ctx.fillText("GREETINGS TO:", 100 + Math.min(time - 10000, 0), height / 4);
-    ctx.fillText(
-      "IMNEVERSORRY",
-      100 + Math.min(time - 15000, 0),
-      height / 4 + 160
-    );
-    ctx.fillText("PAPU", 100 + Math.min(time - 17000, 0), height / 4 + 160 * 2);
-    ctx.fillText(
-      "PUMPULI",
-      100 + Math.min(time - 18000, 0),
-      height / 4 + 160 * 3
-    );
-    ctx.fillText(
-      "OPOSSUMI",
-      100 + Math.min(time - 20000, 0),
-      height / 4 + 160 * 4
-    );
-  }
+  ctx.fillText(
+    "GREETINGS TO:",
+    100 + Math.sin(time / 50000) * 1000 - 500,
+    height / 4
+  );
+  ctx.fillText(
+    "IMNEVERSORRY",
+    100 + Math.sin((time + 1000) / 5000) * 1000 - 500,
+    height / 4 + 160
+  );
+  ctx.fillText(
+    "PAPU",
+    100 + Math.sin((time + 2000) / 5000) * 1000 - 500,
+    height / 4 + 160 * 2
+  );
+  ctx.fillText(
+    "PUMPULI",
+    100 + Math.sin((time + 3000) / 5000) * 1000 - 500,
+    height / 4 + 160 * 3
+  );
+  ctx.fillText(
+    "OPOSSUMI",
+    100 + Math.sin((time + 4000) / 5000) * 1000 - 500,
+    height / 4 + 160 * 4
+  );
 
   // ctx.fillRect(
   //   width / 4 + Math.sin(time / 1000) * 100,

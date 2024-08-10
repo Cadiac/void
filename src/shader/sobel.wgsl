@@ -7,7 +7,8 @@ struct Uniforms {
 
 @group(0) @binding(0) var frameTexture: texture_2d<f32>;
 @group(0) @binding(1) var outputTexture: texture_storage_2d<rgba8unorm, write>;
-@group(0) @binding(2) var<uniform> uniforms: Uniforms;
+@group(0) @binding(2) var maskTexture: texture_2d<f32>;
+@group(0) @binding(3) var<uniform> uniforms: Uniforms;
 
 var<workgroup> sharedDirectionCounts: array<atomic<u32>, 8>;
 
@@ -42,7 +43,13 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     for (var dy: i32 = -1; dy <= 1; dy++) {
         for (var dx: i32 = -1; dx <= 1; dx++) {
             let texCoord: vec2<i32> = pos + vec2<i32>(dx, dy);
-            let texel: vec4<f32> = textureLoad(frameTexture, texCoord, 0);
+            var texel: vec4<f32> = textureLoad(frameTexture, texCoord, 0);
+            let maskPixel = textureLoad(maskTexture, texCoord, 0);
+
+            if maskPixel.x < 0.7 {
+                texel = vec4f(0.0);
+            }
+
             x += texel.r * sobel_x[dy + 1][dx + 1];
             y += texel.r * sobel_y[dy + 1][dx + 1];
         }
@@ -76,7 +83,8 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         f32(mostCommonDirection) / 8.0,
         isEdgeTile,
         0.0,
-        1.0);
+        1.0
+    );
 
     textureStore(outputTexture, pos, outputColor);
 }
