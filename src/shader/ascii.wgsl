@@ -7,9 +7,8 @@ struct Uniforms {
 
 @group(0) @binding(0) var frameTexture: texture_2d<f32>;
 @group(0) @binding(1) var asciiTexture: texture_2d<f32>;
-@group(0) @binding(2) var edgesTexture: texture_2d<f32>;
-@group(0) @binding(3) var sobelTexture: texture_2d<f32>;
-@group(0) @binding(4) var<uniform> uniforms: Uniforms;
+@group(0) @binding(2) var sobelTexture: texture_2d<f32>;
+@group(0) @binding(3) var<uniform> uniforms: Uniforms;
 
 @fragment
 fn fs(@builtin(position) FragCoord: vec4<f32>) -> @location(0) vec4f {
@@ -23,13 +22,10 @@ fn fs(@builtin(position) FragCoord: vec4<f32>) -> @location(0) vec4f {
     let asciiPixel = textureLoad(asciiTexture, vec2(i32(offset + FragCoord.x % 8), i32(FragCoord.y % 8)), 0);
 
     let sobel = textureLoad(sobelTexture, vec2(i32(FragCoord.x), i32(FragCoord.y)), 0);
-    
-    let isEdge = sobel.y == 1.0;
 
+    let isEdge = sobel.y == 1.0;
     if !isEdge {
-        return uniforms.background * color +
-            asciiPixel * color * uniforms.fill +
-            asciiPixel * (1 - uniforms.fill);
+        return uniforms.background * color + asciiPixel * color * uniforms.fill + asciiPixel * (1 - uniforms.fill);
     }
 
     let mostCommonDirection = u32(round(sobel.x * 8.0));
@@ -55,11 +51,10 @@ fn fs(@builtin(position) FragCoord: vec4<f32>) -> @location(0) vec4f {
     }
 
     let edgePixel = textureLoad(
-        edgesTexture,
-        vec2(edge + i32(FragCoord.x % 8),
-        i32(FragCoord.y % 8)), 0);
+        asciiTexture,
+        vec2(edge + 80 + i32(FragCoord.x % 8),
+            i32(FragCoord.y % 8)), 0
+    );
 
-    return uniforms.background * color +
-        edgePixel * color * uniforms.edges +
-        edgePixel * (1 - uniforms.edges);
+    return uniforms.background * color + edgePixel * color * uniforms.edges + edgePixel * (1 - uniforms.edges);
 }

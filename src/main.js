@@ -181,7 +181,10 @@ async function initialize(analyser, audioCtx) {
     format
   );
 
-  const asciiTextureContext = createAsciiTexture(" .:coePO0■");
+  const fill = " .:coePO0■";
+  const edges = " |-/\\";
+
+  const asciiTextureContext = createAsciiTexture(fill + edges);
   const asciiTextureSource = asciiTextureContext.canvas;
   const asciiTexture = device.createTexture({
     label: "ascii texture",
@@ -198,32 +201,14 @@ async function initialize(analyser, audioCtx) {
     { width: asciiTextureSource.width, height: asciiTextureSource.height }
   );
 
-  const edgesTextureContext = createAsciiTexture(" |-/\\");
-  const edgesTextureSource = edgesTextureContext.canvas;
-  const edgesTexture = device.createTexture({
-    label: "edges texture",
-    format,
-    size: [edgesTextureSource.width, edgesTextureSource.height],
-    usage:
-      GPUTextureUsage.TEXTURE_BINDING |
-      GPUTextureUsage.COPY_DST |
-      GPUTextureUsage.RENDER_ATTACHMENT,
-  });
-  device.queue.copyExternalImageToTexture(
-    { source: edgesTextureSource, flipY: false },
-    { texture: edgesTexture },
-    { width: edgesTextureSource.width, height: edgesTextureSource.height }
-  );
-
   const asciiBindGroup = device.createBindGroup({
     label: "ascii effect bind group",
     layout: asciiRenderPipeline.getBindGroupLayout(0),
     entries: [
       { binding: 0, resource: raymarchPassTexture.createView() },
       { binding: 1, resource: asciiTexture.createView() },
-      { binding: 2, resource: edgesTexture.createView() },
-      { binding: 3, resource: sobelTexture.createView() },
-      { binding: 4, resource: { buffer: asciiUniformsBuffer } },
+      { binding: 2, resource: sobelTexture.createView() },
+      { binding: 3, resource: { buffer: asciiUniformsBuffer } },
     ],
   });
 
