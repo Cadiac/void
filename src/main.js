@@ -221,11 +221,6 @@ async function main() {
 
   // Bloom - brightness filter
 
-  const sampler = device.createSampler({
-    magFilter: "linear",
-    minFilter: "linear",
-  });
-
   const bloomUniformsBuffer = device.createBuffer({
     size: 2 * 4 * 4,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -252,7 +247,7 @@ async function main() {
 
   const brightnessPassBindGroup = createBindGroup(
     brightnessPassPipeline,
-    [sampler, asciiPassTexture.createView(), { buffer: bloomUniformsBuffer }],
+    [asciiPassTexture.createView(), { buffer: bloomUniformsBuffer }],
     "brightness pass bind group"
   );
 
@@ -277,7 +272,7 @@ async function main() {
 
   const blurPassBindGroup = createBindGroup(
     blurPassPipeline,
-    [sampler, brightnessPassTexture.createView()],
+    [brightnessPassTexture.createView()],
     "blur pass bind group"
   );
 
@@ -298,7 +293,6 @@ async function main() {
     [
       asciiPassTexture.createView(),
       blurPassTexture.createView(),
-      sampler,
       { buffer: bloomUniformsBuffer },
     ],
     "bloom pass bind group"

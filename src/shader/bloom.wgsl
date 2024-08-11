@@ -7,8 +7,7 @@ struct Uniforms {
 
 @group(0) @binding(0) var originalTexture: texture_2d<f32>;
 @group(0) @binding(1) var bloomTexture: texture_2d<f32>;
-@group(0) @binding(2) var textureSampler: sampler;
-@group(0) @binding(3) var<uniform> uniforms: Uniforms;
+@group(0) @binding(2) var<uniform> uniforms: Uniforms;
 
 fn blendColorBurn(base: f32, blend: f32) -> f32 {
     if blend == 0.0 {
@@ -20,8 +19,8 @@ fn blendColorBurn(base: f32, blend: f32) -> f32 {
 
 @fragment
 fn fs(@builtin(position) FragCoord: vec4<f32>) -> @location(0) vec4<f32> {
-    let original = textureSample(originalTexture, textureSampler, FragCoord.xy / vec2<f32>(textureDimensions(originalTexture, 0)));
-    let bloom = textureSample(bloomTexture, textureSampler, FragCoord.xy / vec2<f32>(textureDimensions(bloomTexture, 0)));
+    let original = textureLoad(originalTexture, vec2i(FragCoord.xy), 0);
+    let bloom = textureLoad(bloomTexture, vec2i(FragCoord.xy), 0);
 
     if uniforms.burn != 0 {
         return vec4(
