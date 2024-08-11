@@ -20,7 +20,7 @@ wgslminify -e fs src/shader/raymarch.wgsl > tmp/raymarch.min.wgsl
 wgslminify -e main src/shader/sobel.wgsl > tmp/sobel.min.wgsl
 wgslminify -e fs src/shader/ascii.wgsl > tmp/ascii.min.wgsl
 wgslminify -e fs src/shader/brightness.wgsl > tmp/brightness.min.wgsl
-wgslminify -e horizontal_blur,vertical_blur src/shader/blur.wgsl > tmp/blur.min.wgsl
+wgslminify -e fs src/shader/blur.wgsl > tmp/blur.min.wgsl
 wgslminify -e fs src/shader/bloom.wgsl > tmp/bloom.min.wgsl
 
 DEBUG=false \

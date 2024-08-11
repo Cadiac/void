@@ -111,16 +111,16 @@ async function main() {
     : MINIFIED_RAYMARCH_SHADER;
 
   const raymarchPassPipeline = createRenderPipeline(
-    "raymarch",
     raymarchShaderCode,
-    format
+    format,
+    "raymarch"
   );
 
-  const raymarchPassBindGroup = device.createBindGroup({
-    label: "uniforms bind group",
-    layout: raymarchPassPipeline.getBindGroupLayout(0),
-    entries: [{ binding: 0, resource: { buffer: raymarchUniformsBuffer } }],
-  });
+  const raymarchPassBindGroup = createBindGroup(
+    raymarchPassPipeline,
+    [{ buffer: raymarchUniformsBuffer }],
+    "uniforms bind group"
+  );
 
   // Sobel Filter - Compute shader
 
@@ -156,20 +156,20 @@ async function main() {
     : MINIFIED_SOBEL_SHADER;
 
   const sobelComputePipeline = createComputePipeline(
-    "sobel filter compute",
-    sobelShaderCode
+    sobelShaderCode,
+    "sobel filter compute"
   );
 
-  const sobelComputeBindGroup = device.createBindGroup({
-    label: "sobel filter compute bind group",
-    layout: sobelComputePipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: raymarchPassTexture.createView() },
-      { binding: 1, resource: sobelTexture.createView() },
-      { binding: 2, resource: maskTexture.createView() },
-      { binding: 3, resource: { buffer: asciiUniformsBuffer } },
+  const sobelComputeBindGroup = createBindGroup(
+    sobelComputePipeline,
+    [
+      raymarchPassTexture.createView(),
+      sobelTexture.createView(),
+      maskTexture.createView(),
+      { buffer: asciiUniformsBuffer },
     ],
-  });
+    "sobel filter compute bind group"
+  );
 
   // Ascii filter render pass
 
@@ -187,9 +187,9 @@ async function main() {
     : MINIFIED_ASCII_SHADER;
 
   const asciiRenderPipeline = createRenderPipeline(
-    "ascii",
     asciiShaderCode,
-    format
+    format,
+    "ascii"
   );
 
   const fill = " .:coePO0■";
@@ -207,17 +207,17 @@ async function main() {
   );
   copySourceToTexture(device, asciiTexture, asciiTextureSource);
 
-  const asciiBindGroup = device.createBindGroup({
-    label: "ascii effect bind group",
-    layout: asciiRenderPipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: raymarchPassTexture.createView() },
-      { binding: 1, resource: maskTexture.createView() },
-      { binding: 2, resource: asciiTexture.createView() },
-      { binding: 3, resource: sobelTexture.createView() },
-      { binding: 4, resource: { buffer: asciiUniformsBuffer } },
+  const asciiBindGroup = createBindGroup(
+    asciiRenderPipeline,
+    [
+      raymarchPassTexture.createView(),
+      maskTexture.createView(),
+      asciiTexture.createView(),
+      sobelTexture.createView(),
+      { buffer: asciiUniformsBuffer },
     ],
-  });
+    "ascii effect bind group"
+  );
 
   // Bloom - brightness filter
 
@@ -236,9 +236,9 @@ async function main() {
     : MINIFIED_BRIGHTNESS_SHADER;
 
   const brightnessPassPipeline = createRenderPipeline(
-    "brightness filter pass",
     brightnessShaderCode,
-    format
+    format,
+    "brightness filter pass"
   );
 
   const brightnessPassTexture = createTexture(
@@ -250,30 +250,23 @@ async function main() {
     DEBUG ? "brightness pass texture" : undefined
   );
 
-  const brightnessPassBindGroup = device.createBindGroup({
-    label: "brightness pass bind group",
-    layout: brightnessPassPipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: sampler },
-      { binding: 1, resource: asciiPassTexture.createView() },
-      { binding: 2, resource: { buffer: bloomUniformsBuffer } },
-    ],
-  });
+  const brightnessPassBindGroup = createBindGroup(
+    brightnessPassPipeline,
+    [sampler, asciiPassTexture.createView(), { buffer: bloomUniformsBuffer }],
+    "brightness pass bind group"
+  );
 
-  // Bloom - gaussian blur
+  // Bloom - gaussian blur.
+  // Done in one pass to save a bit of space instead of doing more efficient
+  // separate horizontal and vertical passes
 
   const blurShaderCode = DEBUG
     ? await fetch("src/shader/blur.wgsl").then((res) => res.text())
     : MINIFIED_BLUR_SHADER;
 
-  const horizontalBlurPassPipeline = createRenderPipeline(
-    "horizontal blur",
-    blurShaderCode,
-    format,
-    "horizontal_blur"
-  );
+  const blurPassPipeline = createRenderPipeline(blurShaderCode, format, "blur");
 
-  const horizontalBlurPassTexture = createTexture(
+  const blurPassTexture = createTexture(
     canvas,
     GPUTextureUsage.TEXTURE_BINDING |
       GPUTextureUsage.STORAGE_BINDING |
@@ -282,41 +275,11 @@ async function main() {
     DEBUG ? "horizontal blur pass texture" : undefined
   );
 
-  const horizontalBlurPassBindGroup = device.createBindGroup({
-    label: "brightness pass bind group",
-    layout: horizontalBlurPassPipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: sampler },
-      { binding: 1, resource: brightnessPassTexture.createView() },
-    ],
-  });
-
-  // Bloom - vertical blur filter
-
-  const verticalBlurPassPipeline = createRenderPipeline(
-    "vertical blur",
-    blurShaderCode,
-    format,
-    "vertical_blur"
+  const blurPassBindGroup = createBindGroup(
+    blurPassPipeline,
+    [sampler, brightnessPassTexture.createView()],
+    "blur pass bind group"
   );
-
-  const verticalBlurPassTexture = createTexture(
-    canvas,
-    GPUTextureUsage.TEXTURE_BINDING |
-      GPUTextureUsage.STORAGE_BINDING |
-      GPUTextureUsage.COPY_SRC |
-      GPUTextureUsage.RENDER_ATTACHMENT,
-    DEBUG ? "vertical blur pass texture" : undefined
-  );
-
-  const verticalBlurPassBindGroup = device.createBindGroup({
-    label: "brightness pass bind group",
-    layout: verticalBlurPassPipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: sampler },
-      { binding: 1, resource: horizontalBlurPassTexture.createView() },
-    ],
-  });
 
   // Bloom - combine filter
 
@@ -325,21 +288,21 @@ async function main() {
     : MINIFIED_BLOOM_SHADER;
 
   const bloomPassPipeline = createRenderPipeline(
-    "bloom",
     bloomShaderCode,
-    presentationFormat
+    presentationFormat,
+    "bloom"
   );
 
-  const bloomPassBindGroup = device.createBindGroup({
-    label: "bloom pass bind group",
-    layout: bloomPassPipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: asciiPassTexture.createView() },
-      { binding: 1, resource: verticalBlurPassTexture.createView() },
-      { binding: 2, resource: sampler },
-      { binding: 3, resource: { buffer: bloomUniformsBuffer } },
+  const bloomPassBindGroup = createBindGroup(
+    bloomPassPipeline,
+    [
+      asciiPassTexture.createView(),
+      blurPassTexture.createView(),
+      sampler,
+      { buffer: bloomUniformsBuffer },
     ],
-  });
+    "bloom pass bind group"
+  );
 
   // Start the render loop
   render();
@@ -404,17 +367,9 @@ async function main() {
 
     dispatchRenderPass(
       commandEncoder,
-      horizontalBlurPassPipeline,
-      horizontalBlurPassBindGroup,
-      horizontalBlurPassTexture,
-      "horizontal blur filter pass"
-    );
-
-    dispatchRenderPass(
-      commandEncoder,
-      verticalBlurPassPipeline,
-      verticalBlurPassBindGroup,
-      verticalBlurPassTexture,
+      blurPassPipeline,
+      blurPassBindGroup,
+      blurPassTexture,
       "gaussian blur filter pass"
     );
 
@@ -462,6 +417,27 @@ async function main() {
             usage,
           }
     );
+  }
+
+  function createBindGroup(pipeline, resources, label) {
+    if (DEBUG) {
+      return device.createBindGroup({
+        label,
+        layout: pipeline.getBindGroupLayout(0),
+        entries: resources.map((resource, index) => ({
+          binding: index,
+          resource,
+        })),
+      });
+    }
+
+    return device.createBindGroup({
+      layout: pipeline.getBindGroupLayout(0),
+      entries: resources.map((resource, index) => ({
+        binding: index,
+        resource,
+      })),
+    });
   }
 
   function updateCamera(dt) {
@@ -649,12 +625,7 @@ async function main() {
     );
   }
 
-  function createRenderPipeline(
-    label,
-    shaderCode,
-    format,
-    fsEntryPoint = "fs"
-  ) {
+  function createRenderPipeline(shaderCode, format, label) {
     const vertexShaderModule = device.createShaderModule(
       DEBUG
         ? {
@@ -688,7 +659,7 @@ async function main() {
             },
             fragment: {
               module: shaderModule,
-              entryPoint: fsEntryPoint,
+              entryPoint: "fs",
               targets: [{ format }],
             },
             primitive: {
@@ -703,7 +674,7 @@ async function main() {
             },
             fragment: {
               module: shaderModule,
-              entryPoint: fsEntryPoint,
+              entryPoint: "fs",
               targets: [{ format }],
             },
             primitive: {
@@ -715,7 +686,7 @@ async function main() {
     return pipeline;
   }
 
-  function createComputePipeline(label, shaderCode) {
+  function createComputePipeline(shaderCode, label) {
     const shaderModule = device.createShaderModule(
       DEBUG
         ? {
