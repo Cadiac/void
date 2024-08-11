@@ -65,34 +65,41 @@ const state = {
 // Audio can't run without an user initiated event.
 loadSointuWasm(canvas, main);
 
-async function initialize(analyser, audioCtx) {
-  setupKeyboardListener(audioCtx);
+async function main() {
+  if (state.now > 0) {
+    return;
+  }
 
+  if (DEBUG) {
+    if (!navigator.gpu) {
+      alert("WebGPU support is required. Try running this with Google Chrome!");
+    }
+    debug.setup(state);
+  }
+
+  const { analyser, audioCtx } = setupAudio();
+  analyser.fftSize = 256;
   const fftDataArray = new Uint8Array(analyser.frequencyBinCount);
 
-  const adapter = await navigator.gpu.requestAdapter();
-  const device = await adapter.requestDevice();
+  if (DEBUG) {
+    setupKeyboardListener(audioCtx);
+  }
 
-  const context = canvas.getContext("webgpu");
-  const format = "rgba8unorm";
-  const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+  const { device, format, presentationFormat, context } = await setupWebGPU();
 
-  context.configure({
-    device,
-    format: presentationFormat,
-    alphaMode: "opaque",
-  });
+  const vertexShaderCode = DEBUG
+    ? await fetch("src/shader/vertex.wgsl").then((res) => res.text())
+    : MINIFIED_VERTEX_SHADER;
 
   // Raymarch
 
-  const raymarchPassTexture = device.createTexture({
-    format,
-    size: [canvas.width, canvas.height],
-    usage:
-      GPUTextureUsage.TEXTURE_BINDING |
+  const raymarchPassTexture = createTexture(
+    canvas,
+    GPUTextureUsage.TEXTURE_BINDING |
       GPUTextureUsage.COPY_DST |
       GPUTextureUsage.RENDER_ATTACHMENT,
-  });
+    DEBUG ? "raymarch texture" : undefined
+  );
 
   const raymarchUniformsBuffer = device.createBuffer({
     size: 5 * 4 * 4,
@@ -103,9 +110,8 @@ async function initialize(analyser, audioCtx) {
     ? await fetch("src/shader/raymarch.wgsl").then((res) => res.text())
     : MINIFIED_RAYMARCH_SHADER;
 
-  const raymarchPassPipeline = await createRenderPipeline(
+  const raymarchPassPipeline = createRenderPipeline(
     "raymarch",
-    device,
     raymarchShaderCode,
     format
   );
@@ -123,25 +129,22 @@ async function initialize(analyser, audioCtx) {
   maskTextureContext.canvas.height = canvas.height;
 
   const maskTextureSource = maskTextureContext.canvas;
-  const maskTexture = device.createTexture({
-    label: "mask texture",
-    format,
-    size: [maskTextureSource.width, maskTextureSource.height],
-    usage:
-      GPUTextureUsage.TEXTURE_BINDING |
+
+  const maskTexture = createTexture(
+    maskTextureSource,
+    GPUTextureUsage.TEXTURE_BINDING |
       GPUTextureUsage.COPY_DST |
       GPUTextureUsage.RENDER_ATTACHMENT,
-  });
-  // copySourceToTexture(device, maskTexture, maskTextureSource);
+    DEBUG ? "mask texture" : undefined
+  );
 
-  const sobelTexture = device.createTexture({
-    size: { width: canvas.width, height: canvas.height },
-    format,
-    usage:
-      GPUTextureUsage.TEXTURE_BINDING |
+  const sobelTexture = createTexture(
+    canvas,
+    GPUTextureUsage.TEXTURE_BINDING |
       GPUTextureUsage.STORAGE_BINDING |
       GPUTextureUsage.COPY_SRC,
-  });
+    DEBUG ? "sobel texture" : undefined
+  );
 
   const asciiUniformsBuffer = device.createBuffer({
     size: 4 * 4,
@@ -152,9 +155,8 @@ async function initialize(analyser, audioCtx) {
     ? await fetch("src/shader/sobel.wgsl").then((res) => res.text())
     : MINIFIED_SOBEL_SHADER;
 
-  const sobelComputePipeline = await createComputePipeline(
+  const sobelComputePipeline = createComputePipeline(
     "sobel filter compute",
-    device,
     sobelShaderCode
   );
 
@@ -171,24 +173,21 @@ async function initialize(analyser, audioCtx) {
 
   // Ascii filter render pass
 
-  const asciiPassTexture = device.createTexture({
-    label: "ascii pass texture",
-    size: { width: canvas.width, height: canvas.height },
-    format,
-    usage:
-      GPUTextureUsage.TEXTURE_BINDING |
+  const asciiPassTexture = createTexture(
+    canvas,
+    GPUTextureUsage.TEXTURE_BINDING |
       GPUTextureUsage.STORAGE_BINDING |
       GPUTextureUsage.COPY_SRC |
       GPUTextureUsage.RENDER_ATTACHMENT,
-  });
+    DEBUG ? "ascii pass texture" : undefined
+  );
 
   const asciiShaderCode = DEBUG
     ? await fetch("src/shader/ascii.wgsl").then((res) => res.text())
     : MINIFIED_ASCII_SHADER;
 
-  const asciiRenderPipeline = await createRenderPipeline(
+  const asciiRenderPipeline = createRenderPipeline(
     "ascii",
-    device,
     asciiShaderCode,
     format
   );
@@ -198,15 +197,14 @@ async function initialize(analyser, audioCtx) {
 
   const asciiTextureContext = createAsciiTexture(fill + edges);
   const asciiTextureSource = asciiTextureContext.canvas;
-  const asciiTexture = device.createTexture({
-    label: "ascii texture",
-    format,
-    size: [asciiTextureSource.width, asciiTextureSource.height],
-    usage:
-      GPUTextureUsage.TEXTURE_BINDING |
+
+  const asciiTexture = createTexture(
+    asciiTextureSource,
+    GPUTextureUsage.TEXTURE_BINDING |
       GPUTextureUsage.COPY_DST |
       GPUTextureUsage.RENDER_ATTACHMENT,
-  });
+    DEBUG ? "ascii texture" : undefined
+  );
   copySourceToTexture(device, asciiTexture, asciiTextureSource);
 
   const asciiBindGroup = device.createBindGroup({
@@ -237,23 +235,20 @@ async function initialize(analyser, audioCtx) {
     ? await fetch("src/shader/brightness.wgsl").then((res) => res.text())
     : MINIFIED_BRIGHTNESS_SHADER;
 
-  const brightnessPassPipeline = await createRenderPipeline(
+  const brightnessPassPipeline = createRenderPipeline(
     "brightness filter pass",
-    device,
     brightnessShaderCode,
     format
   );
 
-  const brightnessPassTexture = device.createTexture({
-    label: "brightness pass texture",
-    size: { width: canvas.width, height: canvas.height },
-    format,
-    usage:
-      GPUTextureUsage.TEXTURE_BINDING |
+  const brightnessPassTexture = createTexture(
+    canvas,
+    GPUTextureUsage.TEXTURE_BINDING |
       GPUTextureUsage.STORAGE_BINDING |
       GPUTextureUsage.COPY_SRC |
       GPUTextureUsage.RENDER_ATTACHMENT,
-  });
+    DEBUG ? "brightness pass texture" : undefined
+  );
 
   const brightnessPassBindGroup = device.createBindGroup({
     label: "brightness pass bind group",
@@ -271,24 +266,21 @@ async function initialize(analyser, audioCtx) {
     ? await fetch("src/shader/blur.wgsl").then((res) => res.text())
     : MINIFIED_BLUR_SHADER;
 
-  const horizontalBlurPassPipeline = await createRenderPipeline(
+  const horizontalBlurPassPipeline = createRenderPipeline(
     "horizontal blur",
-    device,
     blurShaderCode,
     format,
     "horizontal_blur"
   );
 
-  const horizontalBlurPassTexture = device.createTexture({
-    label: "horizontal blur pass texture",
-    size: { width: canvas.width, height: canvas.height },
-    format,
-    usage:
-      GPUTextureUsage.TEXTURE_BINDING |
+  const horizontalBlurPassTexture = createTexture(
+    canvas,
+    GPUTextureUsage.TEXTURE_BINDING |
       GPUTextureUsage.STORAGE_BINDING |
       GPUTextureUsage.COPY_SRC |
       GPUTextureUsage.RENDER_ATTACHMENT,
-  });
+    DEBUG ? "horizontal blur pass texture" : undefined
+  );
 
   const horizontalBlurPassBindGroup = device.createBindGroup({
     label: "brightness pass bind group",
@@ -301,24 +293,21 @@ async function initialize(analyser, audioCtx) {
 
   // Bloom - vertical blur filter
 
-  const verticalBlurPassPipeline = await createRenderPipeline(
+  const verticalBlurPassPipeline = createRenderPipeline(
     "vertical blur",
-    device,
     blurShaderCode,
     format,
     "vertical_blur"
   );
 
-  const verticalBlurPassTexture = device.createTexture({
-    label: "vertical blur pass texture",
-    size: { width: canvas.width, height: canvas.height },
-    format,
-    usage:
-      GPUTextureUsage.TEXTURE_BINDING |
+  const verticalBlurPassTexture = createTexture(
+    canvas,
+    GPUTextureUsage.TEXTURE_BINDING |
       GPUTextureUsage.STORAGE_BINDING |
       GPUTextureUsage.COPY_SRC |
       GPUTextureUsage.RENDER_ATTACHMENT,
-  });
+    DEBUG ? "vertical blur pass texture" : undefined
+  );
 
   const verticalBlurPassBindGroup = device.createBindGroup({
     label: "brightness pass bind group",
@@ -335,9 +324,8 @@ async function initialize(analyser, audioCtx) {
     ? await fetch("src/shader/bloom.wgsl").then((res) => res.text())
     : MINIFIED_BLOOM_SHADER;
 
-  const bloomPassPipeline = await createRenderPipeline(
+  const bloomPassPipeline = createRenderPipeline(
     "bloom",
-    device,
     bloomShaderCode,
     presentationFormat
   );
@@ -353,19 +341,127 @@ async function initialize(analyser, audioCtx) {
     ],
   });
 
+  // Start the render loop
+  render();
+
   function update(dt) {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
     if (DEBUG) {
       fps.update(dt);
+      updateCamera(dt);
     }
 
     updateMaskTexture(device, maskTexture, maskTextureContext, state.now);
-
-    updateCamera(dt);
     updateFFT();
     updateUniforms();
+  }
+
+  function render() {
+    state.now = performance.now() - state.epoch;
+    const dt = (state.now - state.lastRenderTime) / 1000;
+    state.lastRenderTime = state.now;
+
+    if (state.halt) {
+      return;
+    }
+
+    update(dt);
+
+    const commandEncoder = device.createCommandEncoder();
+
+    dispatchRenderPass(
+      commandEncoder,
+      raymarchPassPipeline,
+      raymarchPassBindGroup,
+      raymarchPassTexture,
+      "raymarch pass"
+    );
+
+    dispatchComputeShader(
+      commandEncoder,
+      sobelComputePipeline,
+      sobelComputeBindGroup,
+      canvas
+    );
+
+    dispatchRenderPass(
+      commandEncoder,
+      asciiRenderPipeline,
+      asciiBindGroup,
+      asciiPassTexture,
+      "ascii filter pass"
+    );
+
+    dispatchRenderPass(
+      commandEncoder,
+      brightnessPassPipeline,
+      brightnessPassBindGroup,
+      brightnessPassTexture,
+      "brightness filter pass"
+    );
+
+    dispatchRenderPass(
+      commandEncoder,
+      horizontalBlurPassPipeline,
+      horizontalBlurPassBindGroup,
+      horizontalBlurPassTexture,
+      "horizontal blur filter pass"
+    );
+
+    dispatchRenderPass(
+      commandEncoder,
+      verticalBlurPassPipeline,
+      verticalBlurPassBindGroup,
+      verticalBlurPassTexture,
+      "gaussian blur filter pass"
+    );
+
+    dispatchRenderPass(
+      commandEncoder,
+      bloomPassPipeline,
+      bloomPassBindGroup,
+      context.getCurrentTexture(),
+      "bloom filter pass"
+    );
+
+    device.queue.submit([commandEncoder.finish()]);
+
+    window.requestAnimationFrame(render);
+  }
+
+  async function setupWebGPU() {
+    const adapter = await navigator.gpu.requestAdapter();
+    const device = await adapter.requestDevice();
+
+    const context = canvas.getContext("webgpu");
+    const format = "rgba8unorm";
+    const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+    context.configure({
+      device,
+      format: presentationFormat,
+      alphaMode: "opaque",
+    });
+    return { device, format, presentationFormat, context };
+  }
+
+  function createTexture(source, usage, label) {
+    return device.createTexture(
+      DEBUG
+        ? {
+            label,
+            format,
+            size: [source.width, source.height],
+            usage,
+          }
+        : {
+            format,
+            size: [source.width, source.height],
+            usage,
+          }
+    );
   }
 
   function updateCamera(dt) {
@@ -385,7 +481,7 @@ async function initialize(analyser, audioCtx) {
 
     const SPEED = 5.0;
 
-    // matikka on päin vittua, mutta mitä sitten
+    // matikka on kyl päin vittua, mutta mitä sitten
     if (state.keyboard.forward) {
       state.camera.position.x += normalized.x * dt * SPEED;
       state.camera.position.y += normalized.y * dt * SPEED;
@@ -485,250 +581,301 @@ async function initialize(analyser, audioCtx) {
     );
   }
 
-  function render() {
-    state.now = performance.now() - state.epoch;
-    const dt = (state.now - state.lastRenderTime) / 1000;
-    state.lastRenderTime = state.now;
-
-    if (state.halt) {
-      return;
-    }
-
-    update(dt);
-
-    const commandEncoder = device.createCommandEncoder();
-
-    dispatchRenderPass(
-      commandEncoder,
-      raymarchPassPipeline,
-      raymarchPassBindGroup,
-      {
-        label: "raymarch pass",
-        colorAttachments: [
-          {
-            view: raymarchPassTexture.createView(),
-            clearValue: [0.3, 0.3, 0.3, 1],
-            loadOp: "clear",
-            storeOp: "store",
-          },
-        ],
-      }
+  function setupKeyboardListener(audioCtx) {
+    document.addEventListener(
+      "keydown",
+      (e) => {
+        switch (e.key) {
+          case "Escape":
+            state.halt = !state.halt;
+            audioCtx.close();
+            break;
+          case "Shift":
+            state.keyboard.down = true;
+            break;
+          case " ":
+            state.keyboard.up = true;
+            break;
+          case "w":
+          case "W":
+            state.keyboard.forward = true;
+            break;
+          case "s":
+          case "S":
+            state.keyboard.back = true;
+            break;
+          case "a":
+          case "A":
+            state.keyboard.left = true;
+            break;
+          case "d":
+          case "D":
+            state.keyboard.right = true;
+            break;
+        }
+      },
+      true
     );
 
-    dispatchComputeShader(
-      commandEncoder,
-      sobelComputePipeline,
-      sobelComputeBindGroup,
-      canvas.width,
-      canvas.height
+    document.addEventListener(
+      "keyup",
+      (e) => {
+        switch (e.key) {
+          case "Shift":
+            state.keyboard.down = false;
+            break;
+          case " ":
+            state.keyboard.up = false;
+            break;
+          case "w":
+          case "W":
+            state.keyboard.forward = false;
+            break;
+          case "s":
+          case "S":
+            state.keyboard.back = false;
+            break;
+          case "a":
+          case "A":
+            state.keyboard.left = false;
+            break;
+          case "d":
+          case "D":
+            state.keyboard.right = false;
+            break;
+        }
+      },
+      true
     );
-
-    dispatchRenderPass(commandEncoder, asciiRenderPipeline, asciiBindGroup, {
-      label: "ascii filter pass",
-      colorAttachments: [
-        {
-          view: asciiPassTexture.createView(),
-          clearValue: [0.3, 0.3, 0.3, 1],
-          loadOp: "clear",
-          storeOp: "store",
-        },
-      ],
-    });
-
-    dispatchRenderPass(
-      commandEncoder,
-      brightnessPassPipeline,
-      brightnessPassBindGroup,
-      {
-        label: "brightness filter pass",
-        colorAttachments: [
-          {
-            view: brightnessPassTexture.createView(),
-            clearValue: [0.3, 0.3, 0.3, 1],
-            loadOp: "clear",
-            storeOp: "store",
-          },
-        ],
-      }
-    );
-
-    dispatchRenderPass(
-      commandEncoder,
-      horizontalBlurPassPipeline,
-      horizontalBlurPassBindGroup,
-      {
-        label: "horizontal blur filter pass",
-        colorAttachments: [
-          {
-            view: horizontalBlurPassTexture.createView(),
-            clearValue: [0.3, 0.3, 0.3, 1],
-            loadOp: "clear",
-            storeOp: "store",
-          },
-        ],
-      }
-    );
-
-    dispatchRenderPass(
-      commandEncoder,
-      verticalBlurPassPipeline,
-      verticalBlurPassBindGroup,
-      {
-        label: "gaussian blur filter pass",
-        colorAttachments: [
-          {
-            view: verticalBlurPassTexture.createView(),
-            clearValue: [0.3, 0.3, 0.3, 1],
-            loadOp: "clear",
-            storeOp: "store",
-          },
-        ],
-      }
-    );
-
-    dispatchRenderPass(commandEncoder, bloomPassPipeline, bloomPassBindGroup, {
-      label: "bloom filter pass",
-      colorAttachments: [
-        {
-          view: context.getCurrentTexture().createView(),
-          clearValue: [0.3, 0.3, 0.3, 1],
-          loadOp: "clear",
-          storeOp: "store",
-        },
-      ],
-    });
-
-    device.queue.submit([commandEncoder.finish()]);
-
-    window.requestAnimationFrame(render);
   }
 
-  render();
-}
+  function createRenderPipeline(
+    label,
+    shaderCode,
+    format,
+    fsEntryPoint = "fs"
+  ) {
+    const vertexShaderModule = device.createShaderModule(
+      DEBUG
+        ? {
+            label: `${label} vertex shader`,
+            code: vertexShaderCode,
+          }
+        : {
+            code: vertexShaderCode,
+          }
+    );
 
-function setupKeyboardListener(audioCtx) {
-  document.addEventListener(
-    "keydown",
-    (e) => {
-      switch (e.key) {
-        case "Escape":
-          state.halt = !state.halt;
-          audioCtx.close();
-          break;
-        case "Shift":
-          state.keyboard.down = true;
-          break;
-        case " ":
-          state.keyboard.up = true;
-          break;
-        case "w":
-        case "W":
-          state.keyboard.forward = true;
-          break;
-        case "s":
-        case "S":
-          state.keyboard.back = true;
-          break;
-        case "a":
-        case "A":
-          state.keyboard.left = true;
-          break;
-        case "d":
-        case "D":
-          state.keyboard.right = true;
-          break;
-      }
-    },
-    true
-  );
+    const shaderModule = device.createShaderModule(
+      DEBUG
+        ? {
+            label: `${label} shader`,
+            code: shaderCode,
+          }
+        : {
+            code: shaderCode,
+          }
+    );
 
-  document.addEventListener(
-    "keyup",
-    (e) => {
-      switch (e.key) {
-        case "Shift":
-          state.keyboard.down = false;
-          break;
-        case " ":
-          state.keyboard.up = false;
-          break;
-        case "w":
-        case "W":
-          state.keyboard.forward = false;
-          break;
-        case "s":
-        case "S":
-          state.keyboard.back = false;
-          break;
-        case "a":
-        case "A":
-          state.keyboard.left = false;
-          break;
-        case "d":
-        case "D":
-          state.keyboard.right = false;
-          break;
-      }
-    },
-    true
-  );
-}
+    const pipeline = device.createRenderPipeline(
+      DEBUG
+        ? {
+            label: `${label} render pipeline`,
+            layout: "auto",
+            vertex: {
+              module: vertexShaderModule,
+              entryPoint: "vs",
+            },
+            fragment: {
+              module: shaderModule,
+              entryPoint: fsEntryPoint,
+              targets: [{ format }],
+            },
+            primitive: {
+              topology: "triangle-strip",
+            },
+          }
+        : {
+            layout: "auto",
+            vertex: {
+              module: vertexShaderModule,
+              entryPoint: "vs",
+            },
+            fragment: {
+              module: shaderModule,
+              entryPoint: fsEntryPoint,
+              targets: [{ format }],
+            },
+            primitive: {
+              topology: "triangle-strip",
+            },
+          }
+    );
 
-async function createRenderPipeline(
-  label,
-  device,
-  shaderCode,
-  format,
-  fsEntryPoint = "fs"
-) {
-  const vertexShaderCode = DEBUG
-    ? await fetch("src/shader/vertex.wgsl").then((res) => res.text())
-    : MINIFIED_VERTEX_SHADER;
+    return pipeline;
+  }
 
-  const vertexShaderModule = device.createShaderModule({
-    label: `${label} vertex shader`,
-    code: vertexShaderCode,
-  });
+  function createComputePipeline(label, shaderCode) {
+    const shaderModule = device.createShaderModule(
+      DEBUG
+        ? {
+            label: `${label} shader`,
+            code: shaderCode,
+          }
+        : {
+            code: shaderCode,
+          }
+    );
 
-  const shaderModule = device.createShaderModule({
-    label: `${label} shader`,
-    code: shaderCode,
-  });
+    const pipeline = device.createComputePipeline(
+      DEBUG
+        ? {
+            label: `${label} render pipeline`,
+            layout: "auto",
+            compute: {
+              module: shaderModule,
+              entryPoint: "main",
+            },
+          }
+        : {
+            layout: "auto",
+            compute: {
+              module: shaderModule,
+              entryPoint: "main",
+            },
+          }
+    );
 
-  return device.createRenderPipelineAsync({
-    label: `${label} render pipeline`,
-    layout: "auto",
-    vertex: {
-      module: vertexShaderModule,
-      entryPoint: "vs",
-    },
-    fragment: {
-      module: shaderModule,
-      entryPoint: fsEntryPoint,
-      targets: [{ format }],
-    },
-    primitive: {
-      topology: "triangle-strip",
-    },
-  });
-}
+    return pipeline;
+  }
 
-async function createComputePipeline(label, device, shaderCode) {
-  const shaderModule = device.createShaderModule({
-    label: `${label} shader`,
-    code: shaderCode,
-  });
+  function createAsciiTexture(characters) {
+    const ctx = document.createElement("canvas").getContext("2d");
 
-  const pipeline = device.createComputePipeline({
-    label: `${label} render pipeline`,
-    layout: "auto",
-    compute: {
-      module: shaderModule,
-      entryPoint: "main",
-    },
-  });
+    const width = 8 * characters.length;
+    const height = 8;
+    ctx.canvas.width = width;
+    ctx.canvas.height = height;
+    ctx.canvas.style["image-rendering"] = "pixelated";
 
-  return pipeline;
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = "white";
+    ctx.font = "8px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    ctx.imageSmoothingEnabled = false;
+
+    const charWidth = width / characters.length;
+    const halfCharWidth = charWidth / 2;
+
+    for (let i = 0; i < characters.length; i++) {
+      const x = i * charWidth + halfCharWidth;
+      ctx.fillText(characters[i], x, height / 2 + 1);
+    }
+
+    return ctx;
+  }
+
+  function updateMaskTexture(device, maskTexture, ctx, time) {
+    const { width, height } = ctx.canvas;
+
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = "#000";
+
+    ctx.fillRect(
+      width / 4 + Math.sin(time / 1000) * 100,
+      height / 4 + Math.cos(time / 1000) * 100,
+      width / 2,
+      height / 2
+    );
+
+    ctx.font = "20em bold serif";
+    ctx.fillStyle = "#0f0";
+
+    const messages = [
+      "GREETINGS TO:",
+      "LOREM",
+      "IPSUM",
+      "DOLOR",
+      "SIT",
+      "AMET",
+    ];
+
+    messages.forEach((message, i) => {
+      ctx.fillText(
+        message,
+        100 + Math.sin((time + 1000 * i) / 5000) * 1000 - 500,
+        height / 4 + 160 * (i - 1)
+      );
+    });
+
+    copySourceToTexture(device, maskTexture, ctx.canvas);
+  }
+
+  function copySourceToTexture(device, texture, source, flipY = false) {
+    device.queue.copyExternalImageToTexture(
+      { source, flipY },
+      { texture },
+      { width: source.width, height: source.height }
+    );
+  }
+
+  function dispatchRenderPass(
+    commandEncoder,
+    pipeline,
+    bindGroup,
+    texture,
+    label
+  ) {
+    const passEncoder = commandEncoder.beginRenderPass(
+      DEBUG
+        ? {
+            label,
+            colorAttachments: [
+              {
+                view: texture.createView(),
+                loadOp: "clear",
+                storeOp: "store",
+              },
+            ],
+          }
+        : {
+            colorAttachments: [
+              {
+                view: texture.createView(),
+                loadOp: "clear",
+                storeOp: "store",
+              },
+            ],
+          }
+    );
+    passEncoder.setPipeline(pipeline);
+    passEncoder.setBindGroup(0, bindGroup);
+    passEncoder.draw(6, 1, 0, 0);
+    passEncoder.end();
+  }
+
+  function dispatchComputeShader(commandEncoder, pipeline, bindGroup, size) {
+    const passEncoder = commandEncoder.beginComputePass();
+    passEncoder.setPipeline(pipeline);
+    passEncoder.setBindGroup(0, bindGroup);
+    passEncoder.dispatchWorkgroups(
+      Math.ceil(size.width / 8),
+      Math.ceil(size.height / 8)
+    );
+    passEncoder.end();
+  }
+
+  async function loadImageBitmap(url) {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return await createImageBitmap(blob, { colorSpaceConversion: "none" });
+  }
 }
 
 function createMainCanvas() {
@@ -738,125 +885,4 @@ function createMainCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
   return canvas;
-}
-
-function createAsciiTexture(characters) {
-  const ctx = document.createElement("canvas").getContext("2d");
-
-  const width = 8 * characters.length;
-  const height = 8;
-  ctx.canvas.width = width;
-  ctx.canvas.height = height;
-  ctx.canvas.style["image-rendering"] = "pixelated";
-
-  ctx.fillStyle = "black";
-  ctx.fillRect(0, 0, width, height);
-
-  ctx.fillStyle = "white";
-  ctx.font = "8px monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-
-  ctx.imageSmoothingEnabled = false;
-
-  const charWidth = width / characters.length;
-  const halfCharWidth = charWidth / 2;
-
-  for (let i = 0; i < characters.length; i++) {
-    const x = i * charWidth + halfCharWidth;
-    ctx.fillText(characters[i], x, height / 2 + 1);
-  }
-
-  return ctx;
-}
-
-function updateMaskTexture(device, maskTexture, ctx, time) {
-  const { width, height } = ctx.canvas;
-
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, width, height);
-
-  ctx.fillStyle = "#000";
-
-  ctx.fillRect(
-    width / 4 + Math.sin(time / 1000) * 100,
-    height / 4 + Math.cos(time / 1000) * 100,
-    width / 2,
-    height / 2
-  );
-
-  ctx.font = "20em bold serif";
-
-  const messages = ["GREETINGS TO:", "LOREM", "IPSUM", "DOLOR", "SIT", "AMET"];
-
-  ctx.fillStyle = "#0f0";
-
-  messages.forEach((message, i) => {
-    ctx.fillText(
-      message,
-      100 + Math.sin((time + 1000 * i) / 5000) * 1000 - 500,
-      height / 4 + 160 * (i - 1)
-    );
-  });
-
-  copySourceToTexture(device, maskTexture, ctx.canvas);
-}
-
-function copySourceToTexture(device, texture, source, flipY = false) {
-  device.queue.copyExternalImageToTexture(
-    { source, flipY },
-    { texture },
-    { width: source.width, height: source.height }
-  );
-}
-
-function dispatchRenderPass(
-  commandEncoder,
-  pipeline,
-  bindGroup,
-  passDescriptor
-) {
-  const passEncoder = commandEncoder.beginRenderPass(passDescriptor);
-  passEncoder.setPipeline(pipeline);
-  passEncoder.setBindGroup(0, bindGroup);
-  passEncoder.draw(6, 1, 0, 0);
-  passEncoder.end();
-}
-
-function dispatchComputeShader(
-  commandEncoder,
-  pipeline,
-  bindGroup,
-  width,
-  height
-) {
-  const passEncoder = commandEncoder.beginComputePass();
-  passEncoder.setPipeline(pipeline);
-  passEncoder.setBindGroup(0, bindGroup);
-  passEncoder.dispatchWorkgroups(Math.ceil(width / 8), Math.ceil(height / 8));
-  passEncoder.end();
-}
-
-async function loadImageBitmap(url) {
-  const res = await fetch(url);
-  const blob = await res.blob();
-  return await createImageBitmap(blob, { colorSpaceConversion: "none" });
-}
-
-async function main() {
-  if (state.now > 0) {
-    return;
-  }
-
-  if (DEBUG) {
-    if (!navigator.gpu) {
-      alert("WebGPU support is required. Try running this with Google Chrome!");
-    }
-    debug.setup(state);
-  }
-
-  const { analyser, audioCtx } = setupAudio();
-  analyser.fftSize = 256;
-
-  initialize(analyser, audioCtx);
 }

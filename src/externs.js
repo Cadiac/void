@@ -49,25 +49,25 @@ obj.exports.l;
 
 /** @const */
 const GPUTextureUsage = {
-  COPY_SRC: 0,
-  COPY_DST: 0,
-  TEXTURE_BINDING: 0,
-  STORAGE_BINDING: 0,
-  RENDER_ATTACHMENT: 0,
+  COPY_SRC: 1 << 0,
+  COPY_DST: 1 << 1,
+  TEXTURE_BINDING: 1 << 2,
+  STORAGE_BINDING: 1 << 3,
+  RENDER_ATTACHMENT: 1 << 4,
 };
 
 /** @const */
 const GPUBufferUsage = {
-  MAP_READ: 0,
-  MAP_WRITE: 0,
-  COPY_SRC: 0,
-  COPY_DST: 0,
-  INDEX: 0,
-  VERTEX: 0,
-  UNIFORM: 0,
-  STORAGE: 0,
-  INDIRECT: 0,
-  QUERY_RESOLVE: 0,
+  MAP_READ: 1 << 0,
+  MAP_WRITE: 1 << 1,
+  COPY_SRC: 1 << 2,
+  COPY_DST: 1 << 3,
+  INDEX: 1 << 4,
+  VERTEX: 1 << 5,
+  UNIFORM: 1 << 6,
+  STORAGE: 1 << 7,
+  INDIRECT: 1 << 8,
+  QUERY_RESOLVE: 1 << 9,
 };
 
 // --- GPUContextConfiguration ---
@@ -170,6 +170,12 @@ GPUDevice.prototype.createShaderModule = function (descriptor) {};
  * @return {GPURenderPipeline}
  */
 GPUDevice.prototype.createRenderPipelineAsync = function (descriptor) {};
+/**
+ * Creates a render pipeline.
+ * @param {!GPURenderPipelineDescriptor} descriptor The descriptor for the render pipeline.
+ * @return {GPURenderPipeline}
+ */
+GPUDevice.prototype.createRenderPipeline = function (descriptor) {};
 /**
  * Creates a compute pipeline.
  * @param {GPUComputePipelineDescriptor} descriptor The descriptor for the compute pipeline.

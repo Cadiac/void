@@ -8,7 +8,8 @@
   },
   "main": "index.js",
   "scripts": {
-    "dev": "npx browser-sync start --server --files \"src\""
+    "dev": "npx browser-sync start --server --files \"src\"",
+    "build": "./build.sh"
   },
   "devDependencies": {
     "@rollup/plugin-replace": "^5.0.5",
