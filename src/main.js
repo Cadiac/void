@@ -188,7 +188,7 @@ async function main() {
 
   const asciiRenderPipeline = createRenderPipeline(
     asciiShaderCode,
-    format,
+    presentationFormat,
     "ascii"
   );
 
@@ -220,6 +220,7 @@ async function main() {
   );
 
   // Bloom - brightness filter
+  /*
 
   const bloomUniformsBuffer = device.createBuffer({
     size: 2 * 4 * 4,
@@ -297,6 +298,7 @@ async function main() {
     ],
     "bloom pass bind group"
   );
+  */
 
   // Start the render loop
   render();
@@ -347,33 +349,33 @@ async function main() {
       commandEncoder,
       asciiRenderPipeline,
       asciiBindGroup,
-      asciiPassTexture,
+      context.getCurrentTexture(),
       "ascii filter pass"
     );
 
-    dispatchRenderPass(
-      commandEncoder,
-      brightnessPassPipeline,
-      brightnessPassBindGroup,
-      brightnessPassTexture,
-      "brightness filter pass"
-    );
+    // dispatchRenderPass(
+    //   commandEncoder,
+    //   brightnessPassPipeline,
+    //   brightnessPassBindGroup,
+    //   brightnessPassTexture,
+    //   "brightness filter pass"
+    // );
 
-    dispatchRenderPass(
-      commandEncoder,
-      blurPassPipeline,
-      blurPassBindGroup,
-      blurPassTexture,
-      "gaussian blur filter pass"
-    );
+    // dispatchRenderPass(
+    //   commandEncoder,
+    //   blurPassPipeline,
+    //   blurPassBindGroup,
+    //   blurPassTexture,
+    //   "gaussian blur filter pass"
+    // );
 
-    dispatchRenderPass(
-      commandEncoder,
-      bloomPassPipeline,
-      bloomPassBindGroup,
-      context.getCurrentTexture(),
-      "bloom filter pass"
-    );
+    // dispatchRenderPass(
+    //   commandEncoder,
+    //   bloomPassPipeline,
+    //   bloomPassBindGroup,
+    //   context.getCurrentTexture(),
+    //   "bloom filter pass"
+    // );
 
     device.queue.submit([commandEncoder.finish()]);
 
@@ -529,26 +531,26 @@ async function main() {
       asciiUniformsBuffer,
       0,
       new Float32Array([
-        state.ascii.background,
         state.ascii.threshold,
+        state.ascii.background,
         state.ascii.fill,
         state.ascii.edges,
       ])
     );
-    device.queue.writeBuffer(
-      bloomUniformsBuffer,
-      0,
-      new Float32Array([
-        state.bloom.threshold,
-        state.bloom.burn,
-        state.bloom.amplify,
-        0,
-        state.bloom.color.red,
-        state.bloom.color.green,
-        state.bloom.color.blue,
-        0,
-      ])
-    );
+    // device.queue.writeBuffer(
+    //   bloomUniformsBuffer,
+    //   0,
+    //   new Float32Array([
+    //     state.bloom.threshold,
+    //     state.bloom.burn,
+    //     state.bloom.amplify,
+    //     0,
+    //     state.bloom.color.red,
+    //     state.bloom.color.green,
+    //     state.bloom.color.blue,
+    //     0,
+    //   ])
+    // );
   }
 
   function setupKeyboardListener(audioCtx) {

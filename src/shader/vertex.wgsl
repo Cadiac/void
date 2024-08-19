@@ -1,5 +1,5 @@
 @vertex
-fn vs(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
+fn vs(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4f {
     let pos = array(
         vec2f(-1.0, -1.0), // bottom left
         vec2f(1.0, -1.0),  // bottom right
