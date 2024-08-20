@@ -20,7 +20,7 @@ fn blendColorBurn(base: f32, blend: f32) -> f32 {
 }
 
 @fragment
-fn fs(@builtin(position) FragCoord: vec4<f32>) -> @location(0) vec4f {
+fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
     let downscale = vec2(i32(FragCoord.x / 8) * 8, i32(FragCoord.y / 8) * 8);
     let color = textureLoad(frameTexture, downscale, 0);
 

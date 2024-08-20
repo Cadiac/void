@@ -61,8 +61,6 @@ const state = {
   },
 };
 
-// Mobile support needs a touch handler.
-// Audio can't run without an user initiated event.
 loadSointuWasm(canvas, main);
 
 async function main() {
@@ -173,14 +171,14 @@ async function main() {
 
   // Ascii filter render pass
 
-  const asciiPassTexture = createTexture(
-    canvas,
-    GPUTextureUsage.TEXTURE_BINDING |
-      GPUTextureUsage.STORAGE_BINDING |
-      GPUTextureUsage.COPY_SRC |
-      GPUTextureUsage.RENDER_ATTACHMENT,
-    DEBUG ? "ascii pass texture" : undefined
-  );
+  // const asciiPassTexture = createTexture(
+  //   canvas,
+  //   GPUTextureUsage.TEXTURE_BINDING |
+  //     GPUTextureUsage.STORAGE_BINDING |
+  //     GPUTextureUsage.COPY_SRC |
+  //     GPUTextureUsage.RENDER_ATTACHMENT,
+  //   DEBUG ? "ascii pass texture" : undefined
+  // );
 
   const asciiShaderCode = DEBUG
     ? await fetch("src/shader/ascii.wgsl").then((res) => res.text())

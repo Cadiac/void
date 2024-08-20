@@ -1,4 +1,5 @@
 const DEBUG = true;
+const TOUCH = false;
 const AUDIO = false;
 
 let o;
@@ -31,7 +32,14 @@ export const loadSointuWasm = async (canvas, init) => {
 
   document.body.innerHTML = "Ready, click!";
   document.body.append(canvas);
-  canvas.ontouchend = canvas.onclick = init;
+
+  // Audio can't run without an user initiated event.
+  if (TOUCH) {
+    // Mobile support needs a touch handler.
+    canvas.ontouchend = canvas.onclick = init;
+  } else {
+    canvas.onclick = init;
+  }
 };
 
 export const setupAudio = () => {

@@ -11,6 +11,7 @@ export default {
     replace({
       DEBUG: process.env.DEBUG === "true",
       AUDIO: process.env.AUDIO === "true",
+      TOUCH: process.env.TOUCH === "true",
       MINIFIED_VERTEX_SHADER: "`" + process.env.MINIFIED_VERTEX_SHADER + "`",
       MINIFIED_RAYMARCH_SHADER:
         "`" + process.env.MINIFIED_RAYMARCH_SHADER + "`",

@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+AUDIO=false
+TOUCH=true
+DEBUG=false
+
 mkdir -p tmp
 mkdir -p entry
 
@@ -19,12 +23,10 @@ wgslminify -e vs src/shader/vertex.wgsl > tmp/vertex.min.wgsl
 wgslminify -e fs src/shader/raymarch.wgsl > tmp/raymarch.min.wgsl
 wgslminify -e main src/shader/sobel.wgsl > tmp/sobel.min.wgsl
 wgslminify -e fs src/shader/ascii.wgsl > tmp/ascii.min.wgsl
-wgslminify -e fs src/shader/brightness.wgsl > tmp/brightness.min.wgsl
-wgslminify -e fs src/shader/blur.wgsl > tmp/blur.min.wgsl
-wgslminify -e fs src/shader/bloom.wgsl > tmp/bloom.min.wgsl
 
-DEBUG=false \
-    AUDIO=true \
+DEBUG=$DEBUG \
+    AUDIO=$AUDIO \
+    TOUCH=$TOUCH \
     MINIFIED_VERTEX_SHADER=$(cat tmp/vertex.min.wgsl) \
     MINIFIED_RAYMARCH_SHADER=$(cat tmp/raymarch.min.wgsl) \
     MINIFIED_SOBEL_SHADER=$(cat tmp/sobel.min.wgsl) \
@@ -44,6 +46,10 @@ java -jar tools/closure-compiler/closure-compiler-v20231112.jar \
     --js tmp/bundle.js \
     --js_output_file tmp/bundle.min.js
 
-ruby tools/png/pnginator.rb tmp/bundle.min.js tmp/song_optimized.wasm entry/index.html
+if [ "$AUDIO" = "true" ]; then
+    ruby tools/png/pnginator.rb tmp/bundle.min.js tmp/song_optimized.wasm entry/index.html
+else
+    ruby tools/png/pnginator.rb tmp/bundle.min.js entry/index.html
+fi
 
 wc -c entry/index.html

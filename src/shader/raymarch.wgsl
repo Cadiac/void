@@ -6,17 +6,17 @@ const COLOR_SHIFT = vec3(1., .92, 1.);
 const SKY_COLOR = vec3(0.8);
 
 struct Camera {
-    position: vec3<f32>,
-    lookAt: vec3<f32>,
+    position: vec3f,
+    lookAt: vec3f,
 };
 
 struct Light {
-    position: vec3<f32>,
+    position: vec3f,
 };
 
 struct Uniforms {
     camera: Camera,
-    resolution: vec2<f32>,
+    resolution: vec2f,
     sun: Light,
     time: f32,
 };
@@ -28,11 +28,11 @@ struct Surface {
 
 struct Ray {
   surface: Surface,
-  position: vec3<f32>,
+  position: vec3f,
   isHit: bool,
 };
 
-fn maxf(a: vec3<f32>, b: f32) -> f32 {
+fn maxf(a: vec3f, b: f32) -> f32 {
     let x = max(a.x, b);
     let y = max(a.y, b);
     let z = max(a.z, b);
@@ -59,16 +59,16 @@ fn rotateZ(theta: f32) -> mat3x3<f32> {
 }
 
 
-fn sphere(position: vec3<f32>, radius: f32) -> f32 {
+fn sphere(position: vec3f, radius: f32) -> f32 {
     return length(position) - radius;
 }
 
-fn cube(position: vec3<f32>, dimensions: vec3<f32>) -> f32 {
+fn cube(position: vec3f, dimensions: vec3f) -> f32 {
     let q = abs(position) - dimensions;
     return length(maxf(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
 }
 
-fn plane(position: vec3<f32>, up: vec3<f32>, height: f32) -> f32 {
+fn plane(position: vec3f, up: vec3f, height: f32) -> f32 {
     // "up" must be normalized
     return dot(position, up) + height;
 }
@@ -80,7 +80,7 @@ fn opUnion(a: Surface, b: Surface) -> Surface {
     return b;
 }
 
-fn scene(position: vec3<f32>) -> Surface {
+fn scene(position: vec3f) -> Surface {
     let s = Surface(1, sphere(position - vec3(0.0, 7.0, 0.0), 4.0));
     let c = Surface(2, cube(
         rotateX(uniforms.time * 0.0005) * rotateY(uniforms.time * 0.0005) * rotateZ(uniforms.time * 0.0005) * position, vec3(1.0)
@@ -100,7 +100,7 @@ fn scene(position: vec3<f32>) -> Surface {
     return surface;
 }
 
-fn sky(camera: Camera, rayDir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f32> {
+fn sky(camera: Camera, rayDir: vec3f, sunDir: vec3f) -> vec3f {
     // Deeper blue when looking up
     var color = SKY_COLOR - 0.5 * rayDir.y;
 
@@ -120,7 +120,7 @@ fn sky(camera: Camera, rayDir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f32> {
 }
 
 
-fn rayMarch(position: vec3<f32>, rayDir: vec3<f32>) -> Ray {
+fn rayMarch(position: vec3f, rayDir: vec3f) -> Ray {
     var stepDist = EPSILON;
     var depth = EPSILON;
 
@@ -149,7 +149,7 @@ fn rayMarch(position: vec3<f32>, rayDir: vec3<f32>) -> Ray {
     return result;
 }
 
-fn softShadows(sunDir: vec3<f32>, position: vec3<f32>, k: f32) -> f32 {
+fn softShadows(sunDir: vec3f, position: vec3f, k: f32) -> f32 {
     var opacity = 1.0;
     var depth = 1.0;
 
@@ -169,8 +169,8 @@ fn softShadows(sunDir: vec3<f32>, position: vec3<f32>, k: f32) -> f32 {
     return opacity;
 }
 
-fn lightning(sunDir: vec3<f32>, normal: vec3<f32>, position: vec3<f32>, rayDir: vec3<f32>,
-    rayDist: f32) -> vec3<f32> {
+fn lightning(sunDir: vec3f, normal: vec3f, position: vec3f, rayDir: vec3f,
+    rayDist: f32) -> vec3f {
 
     let ambient = vec3(0.2); // TODO: ambient
     let diffuseColor = vec3(0.5); // TODO: diffuse
@@ -191,7 +191,7 @@ fn lightning(sunDir: vec3<f32>, normal: vec3<f32>, position: vec3<f32>, rayDir: 
     return color * e + (1.0 - e) * FOG_COLOR;
 }
 
-fn render(camera: Camera, rayDir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f32> {
+fn render(camera: Camera, rayDir: vec3f, sunDir: vec3f) -> vec3f {
     var color = vec3(0.0);
     var reflection = 1.0;
     var dir = rayDir;
@@ -242,7 +242,7 @@ fn render(camera: Camera, rayDir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f32> {
     return color;
 }
 
-fn lookAt(camera: Camera, up: vec3<f32>) -> mat4x4<f32> {
+fn lookAt(camera: Camera, up: vec3f) -> mat4x4<f32> {
     let f = normalize(camera.lookAt - camera.position);
     let s = normalize(cross(up, f));
     let u = cross(f, s);
@@ -253,7 +253,7 @@ fn lookAt(camera: Camera, up: vec3<f32>) -> mat4x4<f32> {
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
 @fragment
-fn fs(@builtin(position) FragCoord: vec4<f32>) -> @location(0) vec4<f32> {
+fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
     let uv = FragCoord.xy - uniforms.resolution.xy / 2.0;
     let w = uniforms.resolution.y / tan(radians(60.0) / 2.0);
     let up = normalize(vec3(0.0, -1.0, 0.0));
@@ -275,5 +275,5 @@ fn fs(@builtin(position) FragCoord: vec4<f32>) -> @location(0) vec4<f32> {
     color.y = smoothstep(0.0, 1.0, color.y);
     color.z = smoothstep(0.0, 1.0, color.z);
 
-    return vec4<f32>(color, 1.0);
+    return vec4f(color, 1.0);
 }
