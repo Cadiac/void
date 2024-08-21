@@ -9,7 +9,7 @@ struct Uniforms {
 
 var<workgroup> sharedDirectionCounts: array<atomic<u32>, 8>;
 
-const kernel = array<vec3f, 3>(
+const kernel = array(
     vec3f(-1.0, 0.0, 1.0),
     vec3f(-2.0, 0.0, 2.0),
     vec3f(-1.0, 0.0, 1.0)
@@ -21,19 +21,19 @@ fn main(@builtin(global_invocation_id) global_id: vec3u) {
     var y = 0.0;
     let pos = vec2i(global_id.xy);
 
-    // Initialize shared memory
-    if global_id.x == 0u && global_id.y == 0u {
-        for (var i = 0; i < 8; i++) {
-            atomicStore(&sharedDirectionCounts[i], 0u);
-        }
-    }
+    // Initialize shared memory - doesn't seem mandatory
+    // if global_id.x == 0u && global_id.y == 0u {
+    //     for (var i = 0; i < 8; i++) {
+    //         atomicStore(&sharedDirectionCounts[i], 0u);
+    //     }
+    // }
 
-    workgroupBarrier();
+    // workgroupBarrier();
 
     // Apply Sobel filter
     for (var dy: i32 = -1; dy <= 1; dy++) {
         for (var dx: i32 = -1; dx <= 1; dx++) {
-            let texCoord = pos + vec2<i32>(dx, dy);
+            let texCoord = pos + vec2i(dx, dy);
             let maskPixel = textureLoad(maskTexture, texCoord, 0);
             var texel = textureLoad(frameTexture, texCoord, 0);
 
@@ -46,13 +46,14 @@ fn main(@builtin(global_invocation_id) global_id: vec3u) {
         }
     }
 
-    let magnitude: f32 = sqrt(x * x + y * y);
-    let angle: f32 = atan2(y, x);
-    let normalizedAngle: f32 = (angle + 3.1416) / (2.0 * 3.1416);
+    let magnitude = sqrt(x * x + y * y);
+    let angle = atan2(y, x);
+    // let normalized = (angle + 3.1416) / (2.0 * 3.1416);
+    let normalized = (angle + 3) / 6;
 
     if magnitude >= uniforms.threshold {
-        let directionIndex: u32 = u32(((normalizedAngle + 1.0 / 16.0) % 1.0) * 8.0);
-        atomicAdd(&sharedDirectionCounts[directionIndex], 1u);
+        let direction = u32(((normalized + 1.0 / 16.0) % 1.0) * 8.0);
+        atomicAdd(&sharedDirectionCounts[direction], 1);
     }
 
     workgroupBarrier();
@@ -74,7 +75,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3u) {
         f32(mostCommonDirection) / 8.0,
         isEdgeTile,
         0.0,
-        1.0
+        0.0
     );
 
     textureStore(outputTexture, pos, outputColor);
