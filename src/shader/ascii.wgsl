@@ -11,7 +11,7 @@ struct Uniforms {
 @group(0) @binding(3) var sobelTexture: texture_2d<f32>;
 @group(0) @binding(4) var<uniform> uniforms: Uniforms;
 
-fn blendColorBurn(base: f32, blend: f32) -> f32 {
+fn colorBurn(base: f32, blend: f32) -> f32 {
     if blend == 0.0 {
         return blend;
     }
@@ -37,20 +37,15 @@ fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
     let asciiPixel = textureLoad(asciiTexture, vec2i(FragCoord.xy % 8) + vec2i(offset, 0), 0);
     let sobel = textureLoad(sobelTexture, vec2i(FragCoord.xy), 0);
 
-    var blend = uniforms.background * color;
+    var base = uniforms.background * color;
     if sobel.y == 1.0 {
-        let direction = u32(round(sobel.x * 8.0));
+        let direction = i32(round(sobel.x * 8.0));
 
-        var edge = 32; // \
-        if direction % 4 == 0 {
-            edge = 8; // |
-        }
-        if direction % 4 == 1 {
-            edge = 24; // /
-        }
-        if direction % 4 == 2 {
-            edge = 16; // -
-        }
+        // 0   |
+        // 8   /
+        // 16  -
+        // 24  \
+        let edge = (direction % 4) * 8;
 
         let edgePixel = textureLoad(
             asciiTexture,
@@ -58,15 +53,15 @@ fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
                 i32(FragCoord.y % 8)), 0
         );
 
-        blend += edgePixel * color * uniforms.edges + edgePixel * (1 - uniforms.edges);
+        base += edgePixel * color * uniforms.edges + edgePixel * (1 - uniforms.edges);
     } else {
-        blend += asciiPixel * color * uniforms.fill + asciiPixel * (1 - uniforms.fill);
+        base += asciiPixel * color * uniforms.fill + asciiPixel * (1 - uniforms.fill);
     }
 
     return vec4(
-        blendColorBurn(color.r, blend.r),
-        blendColorBurn(color.g, blend.g),
-        blendColorBurn(color.b, blend.b),
+        colorBurn(base.r, color.r),
+        colorBurn(base.g, color.g),
+        colorBurn(base.b, color.b),
         1.0
     );
 }

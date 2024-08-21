@@ -197,7 +197,7 @@ async function main() {
   // Inlined ascii texture creation
   const asciiTextureContext = document.createElement("canvas").getContext("2d");
 
-  const characters = " .:coePO0■ |-/\\";
+  const characters = " .:coePO0■|/-\\";
 
   const width = 8 * characters.length;
   const height = 8;
