@@ -30,7 +30,7 @@ export const loadSointuWasm = async (canvas, init) => {
     o = await WebAssembly.instantiate(f[1], { m: Math });
   }
 
-  document.body.innerHTML = "Ready, click!";
+  document.body.innerHTML = "Click!";
   document.body.append(canvas);
 
   // Audio can't run without an user initiated event.

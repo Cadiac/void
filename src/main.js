@@ -685,9 +685,6 @@ async function main() {
               entryPoint: "fs",
               targets: [{ format }],
             },
-            primitive: {
-              topology: "triangle-strip",
-            },
           }
         : {
             layout: "auto",
@@ -699,9 +696,6 @@ async function main() {
               module: shaderModule,
               entryPoint: "fs",
               targets: [{ format }],
-            },
-            primitive: {
-              topology: "triangle-strip",
             },
           }
     );

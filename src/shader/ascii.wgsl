@@ -21,59 +21,52 @@ fn blendColorBurn(base: f32, blend: f32) -> f32 {
 
 @fragment
 fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
-    let downscale = vec2(i32(FragCoord.x / 8) * 8, i32(FragCoord.y / 8) * 8);
+    let downscale = vec2i(FragCoord.xy / 8) * 8;
     let color = textureLoad(frameTexture, downscale, 0);
 
     let maskPixel = textureLoad(maskTexture, downscale, 0);
     if maskPixel.g < 0.7 {
-        return textureLoad(frameTexture, vec2i(FragCoord.xy), 0);
-        // return color;
+        // return textureLoad(frameTexture, vec2i(FragCoord.xy), 0);
+        return color;
     }
 
-    // let luminance = 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
     let luminance = 0.2 * color.r + 0.7 * color.g + 0.1 * color.b;
     let quantized = floor(luminance * 10) / 10;
-    let offset = min(quantized, 0.9) * 80.0;
+    let offset = i32(min(quantized, 0.9) * 80);
 
-    let asciiPixel = textureLoad(asciiTexture, vec2i(i32(offset + FragCoord.x % 8), i32(FragCoord.y % 8)), 0);
+    let asciiPixel = textureLoad(asciiTexture, vec2i(FragCoord.xy % 8) + vec2i(offset, 0), 0);
     let sobel = textureLoad(sobelTexture, vec2i(FragCoord.xy), 0);
 
-    let isEdge = sobel.y == 1.0;
-    if !isEdge {
-        let output = uniforms.background * color + asciiPixel * color * uniforms.fill + asciiPixel * (1 - uniforms.fill);
-        return vec4(
-            blendColorBurn(color.r, output.r),
-            blendColorBurn(color.g, output.g),
-            blendColorBurn(color.b, output.b),
-            1.0
+    var blend = uniforms.background * color;
+    if sobel.y == 1.0 {
+        let direction = u32(round(sobel.x * 8.0));
+
+        var edge = 32; // \
+        if direction % 4 == 0 {
+            edge = 8; // |
+        }
+        if direction % 4 == 1 {
+            edge = 24; // /
+        }
+        if direction % 4 == 2 {
+            edge = 16; // -
+        }
+
+        let edgePixel = textureLoad(
+            asciiTexture,
+            vec2(edge + 80 + i32(FragCoord.x % 8),
+                i32(FragCoord.y % 8)), 0
         );
-    }
 
-    let direction = u32(round(sobel.x * 8.0));
-
-    var edge = 32; // \
-    if direction % 4 == 0 {
-        edge = 8; // |
+        blend += edgePixel * color * uniforms.edges + edgePixel * (1 - uniforms.edges);
+    } else {
+        blend += asciiPixel * color * uniforms.fill + asciiPixel * (1 - uniforms.fill);
     }
-    if direction % 4 == 1 {
-        edge = 24; // /
-    }
-    if direction % 4 == 2 {
-        edge = 16; // -
-    }
-
-    let edgePixel = textureLoad(
-        asciiTexture,
-        vec2(edge + 80 + i32(FragCoord.x % 8),
-            i32(FragCoord.y % 8)), 0
-    );
-
-    let output = uniforms.background * color + edgePixel * color * uniforms.edges + edgePixel * (1 - uniforms.edges);
 
     return vec4(
-        blendColorBurn(color.r, output.r),
-        blendColorBurn(color.g, output.g),
-        blendColorBurn(color.b, output.b),
+        blendColorBurn(color.r, blend.r),
+        blendColorBurn(color.g, blend.g),
+        blendColorBurn(color.b, blend.b),
         1.0
     );
 }
