@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-AUDIO=false
+AUDIO=true
 TOUCH=true
 DEBUG=false
 

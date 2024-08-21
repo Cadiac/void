@@ -190,10 +190,39 @@ async function main() {
     "ascii"
   );
 
-  const fill = " .:coePO0■";
-  const edges = " |-/\\";
+  // const fill = " .:coePO0■";
+  // const edges = " |-/\\";
+  // const asciiTextureContext = createAsciiTexture(fill + edges);
 
-  const asciiTextureContext = createAsciiTexture(fill + edges);
+  // Inlined ascii texture creation
+  const asciiTextureContext = document.createElement("canvas").getContext("2d");
+
+  const characters = " .:coePO0■ |-/\\";
+
+  const width = 8 * characters.length;
+  const height = 8;
+  asciiTextureContext.canvas.width = width;
+  asciiTextureContext.canvas.height = height;
+  asciiTextureContext.canvas.style["image-rendering"] = "pixelated";
+
+  asciiTextureContext.fillStyle = "#000";
+  asciiTextureContext.fillRect(0, 0, width, height);
+
+  asciiTextureContext.fillStyle = "#fff";
+  asciiTextureContext.font = "8px monospace";
+  asciiTextureContext.textAlign = "center";
+  asciiTextureContext.textBaseline = "middle";
+
+  asciiTextureContext.imageSmoothingEnabled = false;
+
+  const charWidth = width / characters.length;
+  const halfCharWidth = charWidth / 2;
+
+  for (let i = 0; i < characters.length; i++) {
+    const x = i * charWidth + halfCharWidth;
+    asciiTextureContext.fillText(characters[i], x, height / 2 + 1);
+  }
+
   const asciiTextureSource = asciiTextureContext.canvas;
 
   const asciiTexture = createTexture(
