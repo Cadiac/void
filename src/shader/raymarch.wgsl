@@ -80,21 +80,26 @@ fn opUnion(a: Surface, b: Surface) -> Surface {
     return b;
 }
 
+fn opRepeat(p: vec3f, s: vec3f) -> vec3f {
+    return p - s * round(p / s);
+}
+
 fn scene(position: vec3f) -> Surface {
-    let s = Surface(1, sphere(position - vec3(0.0, 7.0, 0.0), 4.0));
-    let c = Surface(2, cube(
-        rotateX(uniforms.time * 0.0005) * rotateY(uniforms.time * 0.0005) * rotateZ(uniforms.time * 0.0005) * position, vec3(1.0)
+    let q = opRepeat(position - vec3(0.0, 7.0, 0.0), vec3f(10.0));
+    let sphereDist = Surface(1, sphere(q, 2.0));
+    let cubeDist = Surface(2, cube(
+        rotateX(uniforms.time * 0.0005) * rotateY(uniforms.time * 0.0005) * rotateZ(uniforms.time * 0.0005) * position, vec3(4.0)
     ));
 
-    let p = Surface(3, plane(position, vec3(0.0, 1.0, 0.0), 10.0));
+    let planeDist = Surface(3, plane(position, vec3(0.0, 1.0, 0.0), 10.0));
 
     var surface = opUnion(
-        s,
-        c
+        sphereDist,
+        cubeDist
     );
     surface = opUnion(
         surface,
-        p
+        planeDist
     );
 
     return surface;

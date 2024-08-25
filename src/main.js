@@ -48,7 +48,7 @@ const state = {
     },
     target: {
       x: 0,
-      y: 4.5,
+      y: 0,
       z: 0,
     },
   },
@@ -745,34 +745,34 @@ async function main() {
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, width, height);
 
-    ctx.fillStyle = "#000";
+    // ctx.fillStyle = "#000";
 
-    ctx.fillRect(
-      width / 4 + Math.sin(time / 1000) * 100,
-      height / 4 + Math.cos(time / 1000) * 100,
-      width / 2,
-      height / 2
-    );
+    // ctx.fillRect(
+    //   width / 4 + Math.sin(time / 1000) * 100,
+    //   height / 4 + Math.cos(time / 1000) * 100,
+    //   width / 2,
+    //   height / 2
+    // );
 
-    ctx.font = "20em bold serif";
-    ctx.fillStyle = "#0f0";
+    // ctx.font = "20em bold serif";
+    // ctx.fillStyle = "#0f0";
 
-    const messages = [
-      "GREETINGS TO:",
-      "LOREM",
-      "IPSUM",
-      "DOLOR",
-      "SIT",
-      "AMET",
-    ];
+    // const messages = [
+    //   "GREETINGS TO:",
+    //   "LOREM",
+    //   "IPSUM",
+    //   "DOLOR",
+    //   "SIT",
+    //   "AMET",
+    // ];
 
-    messages.forEach((message, i) => {
-      ctx.fillText(
-        message,
-        100 + Math.sin((time + 1000 * i) / 5000) * 1000 - 500,
-        height / 4 + 160 * (i - 1)
-      );
-    });
+    // messages.forEach((message, i) => {
+    //   ctx.fillText(
+    //     message,
+    //     100 + Math.sin((time + 1000 * i) / 5000) * 1000 - 500,
+    //     height / 4 + 160 * (i - 1)
+    //   );
+    // });
 
     copySourceToTexture(device, maskTexture, ctx.canvas);
   }
