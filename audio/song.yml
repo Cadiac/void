@@ -1,13 +1,55 @@
-bpm: 100
+bpm: 65
 rowsperbeat: 4
 score:
     tracks:
         - numvoices: 1
-          order: [0, -1, -1, -1, 1, 2, -1, -1, -1, -1, 1, 3, -1, -1, -1, 1, 4, -1, -1, -1, 1, 2, -1, -1, -1, 1, -1]
-          patterns: [[60, 1], [0, 1, 1, 1, 1, 1, 1, 1, 1], [55], [57], [52]]
-    rowsperpattern: 16
-    length: 26
+          order: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+          patterns: [[40, 38, 1, 1]]
+        - numvoices: 1
+          order: [0, -1, -1, -1, -1, -1, 1, -1, -1, -1, -1, -1, 2, -1, -1, -1, -1, -1, 3]
+          patterns: [[52], [45], [63], [56], [45]]
+    rowsperpattern: 8
+    length: 24
 patch:
+    - name: Snare
+      numvoices: 1
+      units:
+        - type: envelope
+          id: 244
+          parameters: {attack: 0, decay: 75, gain: 32, release: 0, stereo: 0, sustain: 0}
+        - type: send
+          id: 245
+          parameters: {amount: 128, port: 4, sendpop: 0, target: 244}
+        - type: envelope
+          id: 246
+          parameters: {attack: 0, decay: 70, gain: 128, release: 0, stereo: 0, sustain: 0}
+        - type: distort
+          id: 4
+          parameters: {drive: 8, stereo: 0}
+        - type: send
+          id: 247
+          parameters: {amount: 76, port: 0, sendpop: 1, target: 26}
+        - type: noise
+          id: 25
+          parameters: {gain: 128, shape: 64, stereo: 0}
+        - type: oscillator
+          id: 26
+          parameters: {color: 128, detune: 64, gain: 128, lfo: 0, phase: 64, shape: 64, stereo: 0, transpose: 64, type: 0}
+        - type: addp
+          id: 248
+          parameters: {stereo: 0}
+        - type: filter
+          id: 252
+          parameters: {bandpass: 0, frequency: 19, highpass: 0, lowpass: 1, negbandpass: 0, neghighpass: 0, resonance: 110, stereo: 0}
+        - type: mulp
+          id: 249
+          parameters: {stereo: 0}
+        - type: pan
+          id: 250
+          parameters: {panning: 64, stereo: 0}
+        - type: outaux
+          id: 251
+          parameters: {auxgain: 0, outgain: 32, stereo: 1}
     - name: PadLong
       numvoices: 1
       units:
@@ -48,10 +90,10 @@ patch:
           id: 14
           parameters: {bandpass: 0, frequency: 16, highpass: 0, lowpass: 1, negbandpass: 0, neghighpass: 0, resonance: 48, stereo: 0}
         - type: mulp
-          id: 15
+          id: 271
           parameters: {stereo: 0}
         - type: pan
-          id: 16
+          id: 272
           parameters: {panning: 64, stereo: 0}
         - type: delay
           id: 17
@@ -59,7 +101,7 @@ patch:
           varargs: [48, 24]
         - type: outaux
           id: 21
-          parameters: {auxgain: 64, outgain: 40, stereo: 1}
+          parameters: {auxgain: 15, outgain: 18, stereo: 1}
     - name: Global
       numvoices: 1
       units:

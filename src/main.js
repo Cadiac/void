@@ -1,4 +1,4 @@
-import { loadSointuWasm, setupAudio } from "./audio.js";
+import { loadSointuWasm, startAudio } from "./audio.js";
 import debug from "./debug.js";
 import fps from "./fps.js";
 
@@ -21,7 +21,7 @@ const state = {
     down: false,
   },
   audio: {
-    offset: 22,
+    offset: 3,
     beat: 0,
   },
   ascii: {
@@ -75,7 +75,7 @@ async function main() {
     debug.setup(state);
   }
 
-  const { analyser, audioCtx } = setupAudio();
+  const { analyser, audioCtx } = startAudio();
   analyser.fftSize = 256;
   const fftDataArray = new Uint8Array(analyser.frequencyBinCount);
 
@@ -521,6 +521,8 @@ async function main() {
   function updateFFT() {
     analyser.getByteFrequencyData(fftDataArray);
     state.audio.beat = fftDataArray[state.audio.offset];
+    // state.ascii.fill = (2 * state.audio.beat) / 255;
+    // state.ascii.edges = state.audio.beat / 255;
   }
 
   function updateUniforms() {
@@ -735,36 +737,6 @@ async function main() {
     );
 
     return pipeline;
-  }
-
-  function createAsciiTexture(characters) {
-    const ctx = document.createElement("canvas").getContext("2d");
-
-    const width = 8 * characters.length;
-    const height = 8;
-    ctx.canvas.width = width;
-    ctx.canvas.height = height;
-    ctx.canvas.style["image-rendering"] = "pixelated";
-
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, width, height);
-
-    ctx.fillStyle = "white";
-    ctx.font = "8px monospace";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-
-    ctx.imageSmoothingEnabled = false;
-
-    const charWidth = width / characters.length;
-    const halfCharWidth = charWidth / 2;
-
-    for (let i = 0; i < characters.length; i++) {
-      const x = i * charWidth + halfCharWidth;
-      ctx.fillText(characters[i], x, height / 2 + 1);
-    }
-
-    return ctx;
   }
 
   function updateMaskTexture(device, maskTexture, ctx, time) {

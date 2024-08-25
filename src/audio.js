@@ -1,6 +1,6 @@
 const DEBUG = true;
 const TOUCH = false;
-const AUDIO = false;
+const AUDIO = true;
 
 let o;
 
@@ -42,7 +42,7 @@ export const loadSointuWasm = async (canvas, init) => {
   }
 };
 
-export const setupAudio = () => {
+export const startAudio = () => {
   if (!AUDIO) {
     const audioCtx = new AudioContext();
     const analyser = new AnalyserNode(audioCtx);
