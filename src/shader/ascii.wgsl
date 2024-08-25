@@ -59,9 +59,12 @@ fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
     }
 
     return vec4(
-        colorBurn(color.r, base.r),
-        colorBurn(color.g, base.g),
-        colorBurn(color.b, base.b),
+        // colorBurn(color.r, base.r),
+        // colorBurn(color.g, base.g),
+        // colorBurn(color.b, base.b),
+        colorBurn(base.r, color.r),
+        colorBurn(base.g, color.g),
+        colorBurn(base.b, color.b),
         1.0
     );
 }

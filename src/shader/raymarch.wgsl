@@ -1,9 +1,8 @@
 const MAX_DIST = 250.0;
-const EPSILON = 0.00001;
+const EPSILON = 0.0001;
 
-const FOG_COLOR = vec3(0.5, 0.4, 0.3);
-const COLOR_SHIFT = vec3(1., .92, 1.);
-const SKY_COLOR = vec3(0.8);
+const FOG_COLOR = vec3(0.59, 0.48, 0.88);
+const SKY_COLOR = vec3(0.24, 0.19, 0.36);
 
 struct Camera {
     position: vec3f,
@@ -21,13 +20,8 @@ struct Uniforms {
     time: f32,
 };
 
-struct Surface {
-  id: i32,
-  distance: f32,
-};
-
 struct Ray {
-  surface: Surface,
+  distance: f32,
   position: vec3f,
   isHit: bool,
 };
@@ -73,36 +67,35 @@ fn plane(position: vec3f, up: vec3f, height: f32) -> f32 {
     return dot(position, up) + height;
 }
 
-fn opUnion(a: Surface, b: Surface) -> Surface {
-    if a.distance < b.distance {
-        return a;
-    }
-    return b;
+// fn opUnion(a: Surface, b: Surface) -> Surface {
+//     if a.distance < b.distance {
+//         return a;
+//     }
+//     return b;
+// }
+
+fn opSubtraction(a: f32, b: f32) -> f32 {
+    return max(-a, b);
 }
 
 fn opRepeat(p: vec3f, s: vec3f) -> vec3f {
     return p - s * round(p / s);
 }
 
-fn scene(position: vec3f) -> Surface {
-    let q = opRepeat(position - vec3(0.0, 7.0, 0.0), vec3f(10.0));
-    let sphereDist = Surface(1, sphere(q, 2.0));
-    let cubeDist = Surface(2, cube(
-        rotateX(uniforms.time * 0.0005) * rotateY(uniforms.time * 0.0005) * rotateZ(uniforms.time * 0.0005) * position, vec3(4.0)
-    ));
+fn scene(position: vec3f) -> f32 {
+    let q = opRepeat(position, vec3f(4.5 + sin(uniforms.time * 0.0001)));
+    // let qq = opRepeat(position - vec3f(5.0), vec3f(10.0));
 
-    let planeDist = Surface(3, plane(position, vec3(0.0, 1.0, 0.0), 10.0));
+    // let cubeDist = Surface(2, cube(
+    //     rotateX(uniforms.time * 0.0005) * rotateY(uniforms.time * 0.0005) * rotateZ(uniforms.time * 0.0005) * position, vec3(4.0)
+    // ));
 
-    var surface = opUnion(
-        sphereDist,
-        cubeDist
-    );
-    surface = opUnion(
-        surface,
-        planeDist
+    let dist = opSubtraction(
+        sphere(q, 3.0),
+        cube(position, vec3(20.0))
     );
 
-    return surface;
+    return dist;
 }
 
 fn sky(camera: Camera, rayDir: vec3f, sunDir: vec3f) -> vec3f {
@@ -111,12 +104,12 @@ fn sky(camera: Camera, rayDir: vec3f, sunDir: vec3f) -> vec3f {
 
     // Fade to fog further away
     let dist = (25000. - camera.position.y) / rayDir.y;
-    let e = exp2(-abs(dist) * EPSILON * COLOR_SHIFT);
+    let e = exp2(-abs(dist) * EPSILON * vec3(0.1));
     color = color * e + (1.0 - e) * FOG_COLOR;
 
     // Sun
     let dotSun = dot(sunDir, rayDir);
-    if dotSun > 0.9999 {
+    if dotSun > 0.99 {
         let h = rayDir.y - sunDir.y;
         color = vec3(0.9);
     }
@@ -135,21 +128,21 @@ fn rayMarch(position: vec3f, rayDir: vec3f) -> Ray {
         stepDist = 0.001 * depth;
 
         result.position = position + depth * rayDir;
-        result.surface = scene(result.position);
+        result.distance = scene(result.position);
 
-        if result.surface.distance < stepDist {
+        if result.distance < stepDist {
             result.isHit = true;
             break;
         }
 
-        depth += result.surface.distance * 0.5;
+        depth += result.distance * 0.5;
 
         if depth >= MAX_DIST {
             break;
         }
     }
 
-    result.surface.distance = depth;
+    result.distance = depth;
 
     return result;
 }
@@ -163,12 +156,12 @@ fn softShadows(sunDir: vec3f, position: vec3f, k: f32) -> f32 {
             return opacity;
         }
 
-        let surface = scene(position + depth * sunDir);
-        if surface.distance < EPSILON {
+        let dist = scene(position + depth * sunDir);
+        if dist < EPSILON {
             return 0.0;
         }
-        opacity = min(opacity, k * surface.distance / depth);
-        depth += surface.distance;
+        opacity = min(opacity, k * dist / depth);
+        depth += dist;
     }
 
     return opacity;
@@ -177,22 +170,22 @@ fn softShadows(sunDir: vec3f, position: vec3f, k: f32) -> f32 {
 fn lightning(sunDir: vec3f, normal: vec3f, position: vec3f, rayDir: vec3f,
     rayDist: f32) -> vec3f {
 
-    let ambient = vec3(0.2); // TODO: ambient
+    let ambient = vec3(0.1); // TODO: ambient
     let diffuseColor = vec3(0.5); // TODO: diffuse
-    let specularColor = vec3(0.8); // TODO: specular
+    let specularColor = vec3(1.0); // TODO: specular
     let hardness = 10.0; // TODO: hardness
 
-    let shadow = softShadows(sunDir, position, 10.0);
+    let shadow = softShadows(sunDir, position, 50.0);
     let dotLN = clamp(dot(sunDir, normal) * shadow, 0.0, 1.0);
     let diffuse = diffuseColor * dotLN;
 
-    let dotRV = clamp(dot(reflect(sunDir, normal), rayDir), 0.0, 1.0);
+    let dotRV = clamp(dot(reflect(sunDir, normal) * shadow, rayDir), 0.0, 1.0);
     let specular = specularColor * pow(dotRV, hardness);
 
     let color = ambient + diffuse + specular;
 
     // Fog
-    let e = exp2(-rayDist * 0.05 * COLOR_SHIFT);
+    let e = exp2(-rayDist * 0.05 * vec3(1.0));
     return color * e + (1.0 - e) * FOG_COLOR;
 }
 
@@ -214,30 +207,21 @@ fn render(camera: Camera, rayDir: vec3f, sunDir: vec3f) -> vec3f {
 
         // Tetrahedron technique, https://iquilezles.org/articles/normalsSDF/, MIT
         const k = vec2(1, -1);
-        let a = k.xyy * scene(ray.position + k.xyy * EPSILON).distance;
-        let b = k.yyx * scene(ray.position + k.yyx * EPSILON).distance;
-        let c = k.yxy * scene(ray.position + k.yxy * EPSILON).distance;
-        let d = k.xxx * scene(ray.position + k.xxx * EPSILON).distance;
+        let a = k.xyy * scene(ray.position + k.xyy * EPSILON);
+        let b = k.yyx * scene(ray.position + k.yyx * EPSILON);
+        let c = k.yxy * scene(ray.position + k.yxy * EPSILON);
+        let d = k.xxx * scene(ray.position + k.xxx * EPSILON);
 
         let normal = normalize(
             a + b + c + d
         );
 
-        rayDist += ray.surface.distance;
+        rayDist += ray.distance;
         let newColor = lightning(sunDir, normal, ray.position, dir, rayDist);
 
         color = mix(color, newColor, reflection);
 
-        // TODO: read reflection from material
-        if ray.surface.id == 1 {
-            reflection *= 0.5;
-        } else {
-            reflection = 0.0;
-        }
-
-        if reflection < EPSILON {
-            break;
-        }
+        reflection *= 0.5;
 
         dir = reflect(dir, normal);
         ray = rayMarch(ray.position, dir);
