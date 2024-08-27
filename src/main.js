@@ -8,7 +8,7 @@ const DEBUG = true;
 
 const state = {
   halt: false,
-  epoch: performance.now(),
+  epoch: 0,
   now: 0,
   dt: 0,
   lastRenderTime: 0,
@@ -64,6 +64,8 @@ const state = {
 loadSointuWasm(canvas, main);
 
 async function main() {
+  state.epoch = performance.now();
+
   if (state.now > 0) {
     return;
   }
@@ -100,7 +102,7 @@ async function main() {
   );
 
   const raymarchUniformsBuffer = device.createBuffer({
-    size: 5 * 4 * 4,
+    size: 3 * 4 * 4,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
@@ -521,6 +523,7 @@ async function main() {
   function updateFFT() {
     analyser.getByteFrequencyData(fftDataArray);
     state.audio.beat = fftDataArray[state.audio.offset];
+    state.ascii.background = state.audio.beat / 255;
     // state.ascii.fill = (2 * state.audio.beat) / 255;
     // state.ascii.edges = state.audio.beat / 255;
   }
@@ -542,18 +545,8 @@ async function main() {
 
         canvas.width,
         canvas.height,
-        0,
-        0,
-
-        state.sun.position.x,
-        state.sun.position.y,
-        state.sun.position.z,
-        0,
-
         state.now,
-        0,
-        0,
-        0,
+        state.audio.beat / 255,
       ])
     );
     device.queue.writeBuffer(

@@ -1,29 +1,22 @@
 const MAX_DIST = 250.0;
 const EPSILON = 0.0001;
 
-const FOG_COLOR = vec3(0.59, 0.48, 0.88);
-const SKY_COLOR = vec3(0.24, 0.19, 0.36);
-
-struct Camera {
-    position: vec3f,
-    lookAt: vec3f,
-};
-
-struct Light {
-    position: vec3f,
-};
+const FOG_COLOR = vec3(0.98, 1.0, 0.96);
+const SKY_COLOR = vec3(0.5);
+// const FOG_COLOR = vec3(0.6, 0.5, 0.9);
+// const SKY_COLOR = vec3(0.2, 0.2, 0.4);
 
 struct Uniforms {
-    camera: Camera,
+    camera: vec3f,
+    lookAt: vec3f, 
     resolution: vec2f,
-    sun: Light,
     time: f32,
+    beat: f32,
 };
 
 struct Ray {
   distance: f32,
   position: vec3f,
-  isHit: bool,
 };
 
 fn maxf(a: vec3f, b: f32) -> f32 {
@@ -34,24 +27,23 @@ fn maxf(a: vec3f, b: f32) -> f32 {
 }
 
 // http://en.wikipedia.org/wiki/Rotation_matrix#Basic_rotations
-fn rotateX(theta: f32) -> mat3x3<f32> {
-    let s = sin(theta);
-    let c = cos(theta);
-    return mat3x3(vec3(1, 0, 0), vec3(0, c, -s), vec3(0, s, c));
-}
+// fn rotateX(theta: f32) -> mat3x3<f32> {
+//     let s = sin(theta);
+//     let c = cos(theta);
+//     return mat3x3(vec3(1, 0, 0), vec3(0, c, -s), vec3(0, s, c));
+// }
 
-fn rotateY(theta: f32) -> mat3x3<f32> {
-    let s = sin(theta);
-    let c = cos(theta);
-    return mat3x3(vec3(c, 0, s), vec3(0, 1, 0), vec3(-s, 0, c));
-}
+// fn rotateY(theta: f32) -> mat3x3<f32> {
+//     let s = sin(theta);
+//     let c = cos(theta);
+//     return mat3x3(vec3(c, 0, s), vec3(0, 1, 0), vec3(-s, 0, c));
+// }
 
-fn rotateZ(theta: f32) -> mat3x3<f32> {
-    let s = sin(theta);
-    let c = cos(theta);
-    return mat3x3(vec3(c, -s, 0), vec3(s, c, 0), vec3(0, 0, 1));
-}
-
+// fn rotateZ(theta: f32) -> mat3x3<f32> {
+//     let s = sin(theta);
+//     let c = cos(theta);
+//     return mat3x3(vec3(c, -s, 0), vec3(s, c, 0), vec3(0, 0, 1));
+// }
 
 fn sphere(position: vec3f, radius: f32) -> f32 {
     return length(position) - radius;
@@ -62,10 +54,10 @@ fn cube(position: vec3f, dimensions: vec3f) -> f32 {
     return length(maxf(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
 }
 
-fn plane(position: vec3f, up: vec3f, height: f32) -> f32 {
-    // "up" must be normalized
-    return dot(position, up) + height;
-}
+// fn plane(position: vec3f, up: vec3f, height: f32) -> f32 {
+//     // "up" must be normalized
+//     return dot(position, up) + height;
+// }
 
 // fn opUnion(a: Surface, b: Surface) -> Surface {
 //     if a.distance < b.distance {
@@ -98,12 +90,12 @@ fn scene(position: vec3f) -> f32 {
     return dist;
 }
 
-fn sky(camera: Camera, rayDir: vec3f, sunDir: vec3f) -> vec3f {
+fn sky(camera: vec3f, rayDir: vec3f, sunDir: vec3f) -> vec3f {
     // Deeper blue when looking up
     var color = SKY_COLOR - 0.5 * rayDir.y;
 
     // Fade to fog further away
-    let dist = (25000. - camera.position.y) / rayDir.y;
+    let dist = (25000. - camera.y) / rayDir.y;
     let e = exp2(-abs(dist) * EPSILON * vec3(0.1));
     color = color * e + (1.0 - e) * FOG_COLOR;
 
@@ -131,7 +123,6 @@ fn rayMarch(position: vec3f, rayDir: vec3f) -> Ray {
         result.distance = scene(result.position);
 
         if result.distance < stepDist {
-            result.isHit = true;
             break;
         }
 
@@ -189,18 +180,18 @@ fn lightning(sunDir: vec3f, normal: vec3f, position: vec3f, rayDir: vec3f,
     return color * e + (1.0 - e) * FOG_COLOR;
 }
 
-fn render(camera: Camera, rayDir: vec3f, sunDir: vec3f) -> vec3f {
+fn render(camera: vec3f, rayDir: vec3f, sunDir: vec3f) -> vec3f {
     var color = vec3(0.0);
     var reflection = 1.0;
     var dir = rayDir;
 
     var rayDist = 0.0;
-    var ray = rayMarch(camera.position, dir);
+    var ray = rayMarch(camera, dir);
 
     const bounces = 4;
 
     for (var i = 0; i < bounces; i++) {
-        if !ray.isHit {
+        if ray.distance >= MAX_DIST {
             color = mix(color, sky(camera, dir, sunDir), reflection);
             break;
         }
@@ -231,8 +222,8 @@ fn render(camera: Camera, rayDir: vec3f, sunDir: vec3f) -> vec3f {
     return color;
 }
 
-fn lookAt(camera: Camera, up: vec3f) -> mat4x4<f32> {
-    let f = normalize(camera.lookAt - camera.position);
+fn lookAt(position: vec3f, lookAt: vec3f, up: vec3f) -> mat4x4<f32> {
+    let f = normalize(lookAt - position);
     let s = normalize(cross(up, f));
     let u = cross(f, s);
 
@@ -248,7 +239,7 @@ fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
     let up = normalize(vec3(0.0, -1.0, 0.0));
 
     let viewDir = normalize(vec3(uv, -w));
-    let viewToWorld = lookAt(uniforms.camera, up);
+    let viewToWorld = lookAt(uniforms.camera, uniforms.lookAt, up);
     let rayDir = (viewToWorld * vec4(viewDir, 0.0)).xyz;
 
     let sunDir = normalize(vec3(1.0, 2.0, 3.0));

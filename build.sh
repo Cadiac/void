@@ -2,7 +2,7 @@
 set -e
 
 AUDIO=true
-TOUCH=true
+TOUCH=false
 DEBUG=false
 
 mkdir -p tmp
