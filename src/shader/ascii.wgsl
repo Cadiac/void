@@ -26,8 +26,8 @@ fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
 
     let maskPixel = textureLoad(maskTexture, downscale, 0);
     if maskPixel.g < 0.7 {
-        return textureLoad(frameTexture, vec2i(FragCoord.xy), 0);
-        // return color;
+        // return vec4f(1.0) - textureLoad(frameTexture, vec2i(FragCoord.xy), 0);
+        return color;
     }
 
     let luminance = 0.2 * color.r + 0.7 * color.g + 0.1 * color.b;
@@ -53,9 +53,9 @@ fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
                 i32(FragCoord.y % 8)), 0
         );
 
-        base += edgePixel * color * uniforms.edges + edgePixel * (1 - uniforms.edges);
+        base += edgePixel * color * uniforms.edges;
     } else {
-        base += asciiPixel * color * uniforms.fill + asciiPixel * (1 - uniforms.fill);
+        base += asciiPixel * color * uniforms.fill;
     }
 
     return vec4(

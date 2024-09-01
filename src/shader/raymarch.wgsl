@@ -251,9 +251,9 @@ fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
         color = mix(color, vec3(0.0), (fadeInDuration - uniforms.time) / fadeInDuration);
     }
 
-    color.x = smoothstep(0.0, 1.0, color.x);
-    color.y = smoothstep(0.0, 1.0, color.y);
-    color.z = smoothstep(0.0, 1.0, color.z);
+    // color.x = smoothstep(0.0, 1.0, color.x);
+    // color.y = smoothstep(0.0, 1.0, color.y);
+    // color.z = smoothstep(0.0, 1.0, color.z);
 
     return vec4f(color, 1.0);
 }

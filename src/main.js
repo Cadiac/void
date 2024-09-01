@@ -27,8 +27,8 @@ const state = {
   ascii: {
     background: 1.0,
     threshold: 0.16,
-    fill: 1.4,
-    edges: 0.89,
+    fill: 1,
+    edges: 1,
   },
   bloom: {
     threshold: 0.8,
@@ -735,37 +735,33 @@ async function main() {
   function updateMaskTexture(device, maskTexture, ctx, time) {
     const { width, height } = ctx.canvas;
 
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, width, height);
 
-    // ctx.fillStyle = "#000";
+    ctx.fillStyle = "#fff";
 
-    // ctx.fillRect(
-    //   width / 4 + Math.sin(time / 1000) * 100,
-    //   height / 4 + Math.cos(time / 1000) * 100,
-    //   width / 2,
-    //   height / 2
-    // );
+    const margin = 30;
+    ctx.fillRect(margin, margin, width - margin * 2, height - margin * 2);
 
-    // ctx.font = "20em bold serif";
-    // ctx.fillStyle = "#0f0";
+    ctx.font = "160px s";
+    // ctx.fillStyle = "#0F0";
+    ctx.fillStyle = "#000";
 
-    // const messages = [
-    //   "GREETINGS TO:",
-    //   "LOREM",
-    //   "IPSUM",
-    //   "DOLOR",
-    //   "SIT",
-    //   "AMET",
-    // ];
-
-    // messages.forEach((message, i) => {
-    //   ctx.fillText(
-    //     message,
-    //     100 + Math.sin((time + 1000 * i) / 5000) * 1000 - 500,
-    //     height / 4 + 160 * (i - 1)
-    //   );
-    // });
+    const message = [
+      "GREETINGS TO:",
+      "PAPU",
+      "PUMPULI",
+      "SAMPOZKI",
+      "BFLORRY",
+      "NINNNU",
+      "SHIONA",
+      "MASKA",
+    ].join("                                ");
+    ctx.fillText(
+      message,
+      5000 - ((state.now / 2) % 20000),
+      height - margin * 2 - 40
+    );
 
     copySourceToTexture(device, maskTexture, ctx.canvas);
   }
