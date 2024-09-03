@@ -422,7 +422,6 @@ async function main() {
     context.configure({
       device,
       format: presentationFormat,
-      alphaMode: "opaque",
     });
     return { device, format, presentationFormat, context };
   }

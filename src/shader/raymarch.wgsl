@@ -14,11 +14,6 @@ struct Uniforms {
     beat: f32,
 };
 
-struct Ray {
-  distance: f32,
-  position: vec3f,
-};
-
 fn maxf(a: vec3f, b: f32) -> f32 {
     let x = max(a.x, b);
     let y = max(a.y, b);
@@ -45,18 +40,18 @@ fn maxf(a: vec3f, b: f32) -> f32 {
 //     return mat3x3(vec3(c, -s, 0), vec3(s, c, 0), vec3(0, 0, 1));
 // }
 
-fn sphere(position: vec3f, radius: f32) -> f32 {
-    return length(position) - radius;
+fn sphere(pos: vec3f, radius: f32) -> f32 {
+    return length(pos) - radius;
 }
 
-fn cube(position: vec3f, dimensions: vec3f) -> f32 {
-    let q = abs(position) - dimensions;
+fn cube(pos: vec3f, dimensions: vec3f) -> f32 {
+    let q = abs(pos) - dimensions;
     return length(maxf(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
 }
 
-// fn plane(position: vec3f, up: vec3f, height: f32) -> f32 {
+// fn plane(pos: vec3f, up: vec3f, height: f32) -> f32 {
 //     // "up" must be normalized
-//     return dot(position, up) + height;
+//     return dot(pos, up) + height;
 // }
 
 // fn opUnion(a: Surface, b: Surface) -> Surface {
@@ -74,17 +69,19 @@ fn opRepeat(p: vec3f, s: vec3f) -> vec3f {
     return p - s * round(p / s);
 }
 
-fn scene(position: vec3f) -> f32 {
-    let q = opRepeat(position, vec3f(4.5 + sin(uniforms.time * 0.0001)));
-    // let qq = opRepeat(position - vec3f(5.0), vec3f(10.0));
+fn scene(pos: vec3f) -> f32 {
+    let q = opRepeat(pos, vec3f(4.5 + sin(uniforms.time * 0.0001)));
+    // let qq = opRepeat(pos - vec3f(5.0), vec3f(10.0));
 
     // let cubeDist = Surface(2, cube(
-    //     rotateX(uniforms.time * 0.0005) * rotateY(uniforms.time * 0.0005) * rotateZ(uniforms.time * 0.0005) * position, vec3(4.0)
+    //     rotateX(uniforms.time * 0.0005) * rotateY(uniforms.time * 0.0005) * rotateZ(uniforms.time * 0.0005) * pos, vec3(4.0)
     // ));
+
+    // let dist = min(sphere(pos, 10.0), cube(pos - vec3f(0.0, 20.0, 0.0), vec3(5.0)));
 
     let dist = opSubtraction(
         sphere(q, 3.0),
-        cube(position, vec3(20.0))
+        cube(pos, vec3(20.0))
     );
 
     return dist;
@@ -110,35 +107,30 @@ fn sky(camera: vec3f, rayDir: vec3f, sunDir: vec3f) -> vec3f {
 }
 
 
-fn rayMarch(position: vec3f, rayDir: vec3f) -> Ray {
+fn rayMarch(pos: vec3f, rayDir: vec3f) -> f32 {
     var stepDist = EPSILON;
     var depth = EPSILON;
-
-    var result: Ray;
 
     for (var i = 0; i < 250; i++) {
         stepDist = 0.001 * depth;
 
-        result.position = position + depth * rayDir;
-        result.distance = scene(result.position);
+        let dist = scene(pos + depth * rayDir);
 
-        if result.distance < stepDist {
+        if dist < stepDist {
             break;
         }
 
-        depth += result.distance * 0.5;
+        depth += dist * 0.5;
 
         if depth >= MAX_DIST {
             break;
         }
     }
 
-    result.distance = depth;
-
-    return result;
+    return depth;
 }
 
-fn softShadows(sunDir: vec3f, position: vec3f, k: f32) -> f32 {
+fn softShadows(sunDir: vec3f, pos: vec3f, k: f32) -> f32 {
     var opacity = 1.0;
     var depth = 1.0;
 
@@ -147,7 +139,7 @@ fn softShadows(sunDir: vec3f, position: vec3f, k: f32) -> f32 {
             return opacity;
         }
 
-        let dist = scene(position + depth * sunDir);
+        let dist = scene(pos + depth * sunDir);
         if dist < EPSILON {
             return 0.0;
         }
@@ -158,7 +150,7 @@ fn softShadows(sunDir: vec3f, position: vec3f, k: f32) -> f32 {
     return opacity;
 }
 
-fn lightning(sunDir: vec3f, normal: vec3f, position: vec3f, rayDir: vec3f,
+fn lightning(sunDir: vec3f, normal: vec3f, pos: vec3f, rayDir: vec3f,
     rayDist: f32) -> vec3f {
 
     let ambient = vec3(0.1); // TODO: ambient
@@ -166,7 +158,7 @@ fn lightning(sunDir: vec3f, normal: vec3f, position: vec3f, rayDir: vec3f,
     let specularColor = vec3(1.0); // TODO: specular
     let hardness = 10.0; // TODO: hardness
 
-    let shadow = softShadows(sunDir, position, 50.0);
+    let shadow = softShadows(sunDir, pos, 50.0);
     let dotLN = clamp(dot(sunDir, normal) * shadow, 0.0, 1.0);
     let diffuse = diffuseColor * dotLN;
 
@@ -186,44 +178,46 @@ fn render(camera: vec3f, rayDir: vec3f, sunDir: vec3f) -> vec3f {
     var dir = rayDir;
 
     var rayDist = 0.0;
-    var ray = rayMarch(camera, dir);
+    var dist = rayMarch(camera, dir);
+    var surface = camera + dist * rayDir;
 
     const bounces = 4;
 
     for (var i = 0; i < bounces; i++) {
-        if ray.distance >= MAX_DIST {
+        if dist >= MAX_DIST {
             color = mix(color, sky(camera, dir, sunDir), reflection);
             break;
         }
 
         // Tetrahedron technique, https://iquilezles.org/articles/normalsSDF/, MIT
         const k = vec2(1, -1);
-        let a = k.xyy * scene(ray.position + k.xyy * EPSILON);
-        let b = k.yyx * scene(ray.position + k.yyx * EPSILON);
-        let c = k.yxy * scene(ray.position + k.yxy * EPSILON);
-        let d = k.xxx * scene(ray.position + k.xxx * EPSILON);
+        let a = k.xyy * scene(surface + k.xyy * EPSILON);
+        let b = k.yyx * scene(surface + k.yyx * EPSILON);
+        let c = k.yxy * scene(surface + k.yxy * EPSILON);
+        let d = k.xxx * scene(surface + k.xxx * EPSILON);
 
         let normal = normalize(
             a + b + c + d
         );
 
-        rayDist += ray.distance;
-        let newColor = lightning(sunDir, normal, ray.position, dir, rayDist);
+        rayDist += dist;
+        let newColor = lightning(sunDir, normal, surface, dir, rayDist);
 
         color = mix(color, newColor, reflection);
 
         reflection *= 0.5;
 
         dir = reflect(dir, normal);
-        ray = rayMarch(ray.position, dir);
+        dist = rayMarch(surface, dir);
+        surface = surface + dist * dir;
     }
 
 
     return color;
 }
 
-fn lookAt(position: vec3f, lookAt: vec3f, up: vec3f) -> mat4x4<f32> {
-    let f = normalize(lookAt - position);
+fn lookAt(pos: vec3f, lookAt: vec3f, up: vec3f) -> mat4x4<f32> {
+    let f = normalize(lookAt - pos);
     let s = normalize(cross(up, f));
     let u = cross(f, s);
 
