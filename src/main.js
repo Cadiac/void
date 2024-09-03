@@ -24,8 +24,8 @@ const state = {
   },
   ascii: {
     background: 1.0,
-    threshold: 0.16,
-    fill: 1,
+    threshold: 0.2,
+    fill: 0.5,
     edges: 1,
   },
   bloom: {
@@ -40,9 +40,9 @@ const state = {
   },
   camera: {
     position: {
-      x: -20.9,
-      y: 3.4,
-      z: 14.4,
+      x: 10,
+      y: 0,
+      z: 0,
     },
     target: {
       x: 0,
@@ -592,11 +592,10 @@ async function main() {
   function updateMaskTexture(device, maskTexture, ctx, time) {
     const { width, height } = ctx.canvas;
 
-    ctx.fillStyle = "#000";
-    ctx.fillRect(0, 0, width, height);
+    // ctx.fillStyle = "#000";
+    // ctx.fillRect(0, 0, width, height);
 
     ctx.fillStyle = "#fff";
-
     const margin = 30;
     ctx.fillRect(margin, margin, width - margin * 2, height - margin * 2);
 

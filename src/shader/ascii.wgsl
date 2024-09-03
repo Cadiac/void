@@ -27,6 +27,7 @@ fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
     let maskPixel = textureLoad(maskTexture, downscale, 0);
     if maskPixel.g < 0.7 {
         // return vec4f(1.0) - textureLoad(frameTexture, vec2i(FragCoord.xy), 0);
+        // return textureLoad(frameTexture, vec2i(FragCoord.xy), 0);
         return color;
     }
 

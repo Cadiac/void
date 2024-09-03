@@ -1,5 +1,5 @@
 const MAX_DIST = 250.0;
-const EPSILON = 0.0001;
+const EPSILON = 0.001;
 
 // const FOG_COLOR = vec3(0.98, 1.0, 0.96);
 // const SKY_COLOR = vec3(0.5);
@@ -73,9 +73,9 @@ fn scene(pos: vec3f) -> f32 {
     let q = opRepeat(pos, vec3f(4.5 + sin(uniforms.time * 0.0001)));
     // let qq = opRepeat(pos - vec3f(5.0), vec3f(10.0));
 
-    // let cubeDist = Surface(2, cube(
+    // let dist = cube(
     //     rotateX(uniforms.time * 0.0005) * rotateY(uniforms.time * 0.0005) * rotateZ(uniforms.time * 0.0005) * pos, vec3(4.0)
-    // ));
+    // );
 
     // let dist = min(sphere(pos, 10.0), cube(pos - vec3f(0.0, 20.0, 0.0), vec3(5.0)));
 
@@ -97,13 +97,13 @@ fn rayMarch(pos: vec3f, rayDir: vec3f) -> f32 {
         let dist = scene(pos + depth * rayDir);
 
         if dist < stepDist {
-            break;
+            return depth;
         }
 
         depth += dist * 0.5;
 
         if depth >= MAX_DIST {
-            break;
+            return depth;
         }
     }
 
@@ -114,47 +114,42 @@ fn rayMarch(pos: vec3f, rayDir: vec3f) -> f32 {
 
 @fragment
 fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
-    let uv = FragCoord.xy - uniforms.resolution.xy / 2.0;
-    let w = uniforms.resolution.y / tan(radians(60.0) / 2.0);
-    let up = normalize(vec3(0.0, -1.0, 0.0));
+    // let uv = FragCoord.xy - uniforms.resolution.xy / 2.0;
+    // let w = uniforms.resolution.y / tan(radians(60.0) / 2.0);
 
     // lookAt
+    // let s = normalize(cross(normalize(vec3(0.0, -1.0, 0.0)), f));
     let f = normalize(uniforms.lookAt - uniforms.camera);
-    let s = normalize(cross(up, f));
-    let u = cross(f, s);
+    let s = normalize(cross(vec3(0.0, -1.0, 0.0), f));
+    var dir = (mat4x4(
+        vec4(s, .0), vec4(cross(f, s), .0), vec4(-f, .0), vec4(.0, .0, .0, 1.)) *                                       // viewToWorld
+        vec4(normalize(vec3(FragCoord.xy - uniforms.resolution.xy / 2.0, -(uniforms.resolution.y / 0.6))), 0.0)).xyz;   // viewDir
 
-    let viewToWorld = mat4x4(vec4(s, .0), vec4(u, .0), vec4(-f, .0), vec4(.0, .0, .0, 1.));
-
-    let viewDir = normalize(vec3(uv, -w));
-    let rayDir = (viewToWorld * vec4(viewDir, 0.0)).xyz;
-
-    let sunDir = normalize(vec3(1.0, 2.0, 3.0));
+    let sunDir = normalize(vec3(1, 2, 3));
 
     // render
     var color = vec3(0.0);
     var reflection = 1.0;
-    var dir = rayDir;
 
     var rayDist = 0.0;
     var dist = rayMarch(uniforms.camera, dir);
-    var pos = uniforms.camera + dist * rayDir;
+    var pos = uniforms.camera + dist * dir;
 
     for (var i = 0; i < 4; i++) {
+        // Sky
         if dist >= MAX_DIST {
-            // sky
-
             // Deeper blue when looking up
-            var sky_color = vec3(0.5) - 0.5 * rayDir.y;
+            var sky_color = vec3(0.1) - 0.5 * dir.y;
 
             // Fade to fog further away
-            let dist = (25000. - uniforms.camera.y) / rayDir.y;
+            let dist = (25000. - uniforms.camera.y) / dir.y;
             let e = exp2(-abs(dist) * EPSILON * vec3(0.1));
             sky_color = sky_color * e + (1.0 - e) * vec3(0.98, 1.0, 0.96);
 
             // Sun
-            let dotSun = dot(sunDir, rayDir);
+            let dotSun = dot(sunDir, dir);
             if dotSun > 0.99 {
-                let h = rayDir.y - sunDir.y;
+                let h = dir.y - sunDir.y;
                 sky_color = vec3(0.9);
             }
 
@@ -164,22 +159,19 @@ fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
 
         // Tetrahedron technique, https://iquilezles.org/articles/normalsSDF/, MIT
         const k = vec2(1, -1);
-        let a = k.xyy * scene(pos + k.xyy * EPSILON);
-        let b = k.yyx * scene(pos + k.yyx * EPSILON);
-        let c = k.yxy * scene(pos + k.yxy * EPSILON);
-        let d = k.xxx * scene(pos + k.xxx * EPSILON);
-
         let normal = normalize(
-            a + b + c + d
+            k.xyy * scene(pos + k.xyy * EPSILON) +
+            k.yyx * scene(pos + k.yyx * EPSILON) +
+            k.yxy * scene(pos + k.yxy * EPSILON) +
+            k.xxx * scene(pos + k.xxx * EPSILON)
         );
 
         rayDist += dist;
 
-        // lightning
+        // Soft shadows
         var shadow = 1.0;
         var depth = 1.0;
 
-        // softshadow
         for (var s = 0; s < 250; s++) {
             if depth >= MAX_DIST {
                 break;
@@ -194,18 +186,12 @@ fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
             depth += dist;
         }
 
-        let dotLN = clamp(dot(sunDir, normal) * shadow, 0.0, 1.0);
-        let diffuse = vec3(0.5) * dotLN;
-
-        let dotRV = clamp(dot(reflect(sunDir, normal) * shadow, rayDir), 0.0, 1.0);
-        let specular = vec3(1.0) * pow(dotRV, 10.0); // hardness
-
-
-        // Fog
-        let e = exp2(-rayDist * 0.05 * vec3(1.0));
-        let shaded = (vec3(0.1) + diffuse + specular) * e + (1.0 - e) * vec3(0.98, 1.0, 0.96);
-
-        color = mix(color, shaded, reflection);
+        let e = exp2(-rayDist * 0.05 * vec3(1.0));                                                  // Fog
+        color = mix(color, (
+            vec3(0.0) +                                                                             // Ambient
+            vec3(0.1) * clamp(dot(sunDir, normal) * shadow, 0.0, 1.0) +                             // Diffuse
+            vec3(0.8) * pow(clamp(dot(reflect(sunDir, normal) * shadow, dir), 0.0, 1.0), 10.0)      // Specular
+        ) * e + (1.0 - e) * vec3(0.98, 1.0, 0.96), reflection);                                     // Fog color
 
         reflection *= 0.5;
 
