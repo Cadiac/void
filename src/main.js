@@ -10,8 +10,6 @@ const state = {
   halt: false,
   epoch: 0,
   now: 0,
-  dt: 0,
-  lastRenderTime: 0,
   keyboard: {
     forward: false,
     back: false,
@@ -52,23 +50,16 @@ const state = {
       z: 0,
     },
   },
-  sun: {
-    position: {
-      x: 1,
-      y: 2,
-      z: 3,
-    },
-  },
 };
 
 loadSointuWasm(canvas, main);
 
 async function main() {
-  state.epoch = performance.now();
-
   if (state.now > 0) {
     return;
   }
+
+  state.epoch = performance.now();
 
   if (DEBUG) {
     if (!navigator.gpu) {
@@ -171,17 +162,6 @@ async function main() {
     "sobel filter compute bind group"
   );
 
-  // Ascii filter render pass
-
-  // const asciiPassTexture = createTexture(
-  //   canvas,
-  //   GPUTextureUsage.TEXTURE_BINDING |
-  //     GPUTextureUsage.STORAGE_BINDING |
-  //     GPUTextureUsage.COPY_SRC |
-  //     GPUTextureUsage.RENDER_ATTACHMENT,
-  //   DEBUG ? "ascii pass texture" : undefined
-  // );
-
   const asciiShaderCode = DEBUG
     ? await fetch("src/shader/ascii.wgsl").then((res) => res.text())
     : MINIFIED_ASCII_SHADER;
@@ -191,10 +171,6 @@ async function main() {
     presentationFormat,
     "ascii"
   );
-
-  // const fill = " .:coePO0■";
-  // const edges = " |-/\\";
-  // const asciiTextureContext = createAsciiTexture(fill + edges);
 
   // Inlined ascii texture creation
   const asciiTextureContext = document.createElement("canvas").getContext("2d");
@@ -248,98 +224,22 @@ async function main() {
     "ascii effect bind group"
   );
 
-  // Bloom - brightness filter
-  /*
-
-  const bloomUniformsBuffer = device.createBuffer({
-    size: 2 * 4 * 4,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-
-  const brightnessShaderCode = DEBUG
-    ? await fetch("src/shader/brightness.wgsl").then((res) => res.text())
-    : MINIFIED_BRIGHTNESS_SHADER;
-
-  const brightnessPassPipeline = createRenderPipeline(
-    brightnessShaderCode,
-    format,
-    "brightness filter pass"
-  );
-
-  const brightnessPassTexture = createTexture(
-    canvas,
-    GPUTextureUsage.TEXTURE_BINDING |
-      GPUTextureUsage.STORAGE_BINDING |
-      GPUTextureUsage.COPY_SRC |
-      GPUTextureUsage.RENDER_ATTACHMENT,
-    DEBUG ? "brightness pass texture" : undefined
-  );
-
-  const brightnessPassBindGroup = createBindGroup(
-    brightnessPassPipeline,
-    [asciiPassTexture.createView(), { buffer: bloomUniformsBuffer }],
-    "brightness pass bind group"
-  );
-
-  // Bloom - gaussian blur.
-  // Done in one pass to save a bit of space instead of doing more efficient
-  // separate horizontal and vertical passes
-
-  const blurShaderCode = DEBUG
-    ? await fetch("src/shader/blur.wgsl").then((res) => res.text())
-    : MINIFIED_BLUR_SHADER;
-
-  const blurPassPipeline = createRenderPipeline(blurShaderCode, format, "blur");
-
-  const blurPassTexture = createTexture(
-    canvas,
-    GPUTextureUsage.TEXTURE_BINDING |
-      GPUTextureUsage.STORAGE_BINDING |
-      GPUTextureUsage.COPY_SRC |
-      GPUTextureUsage.RENDER_ATTACHMENT,
-    DEBUG ? "horizontal blur pass texture" : undefined
-  );
-
-  const blurPassBindGroup = createBindGroup(
-    blurPassPipeline,
-    [brightnessPassTexture.createView()],
-    "blur pass bind group"
-  );
-
-  // Bloom - combine filter
-
-  const bloomShaderCode = DEBUG
-    ? await fetch("src/shader/bloom.wgsl").then((res) => res.text())
-    : MINIFIED_BLOOM_SHADER;
-
-  const bloomPassPipeline = createRenderPipeline(
-    bloomShaderCode,
-    presentationFormat,
-    "bloom"
-  );
-
-  const bloomPassBindGroup = createBindGroup(
-    bloomPassPipeline,
-    [
-      asciiPassTexture.createView(),
-      blurPassTexture.createView(),
-      { buffer: bloomUniformsBuffer },
-    ],
-    "bloom pass bind group"
-  );
-  */
-
   // Start the render loop
   render();
 
-  function update(dt) {
+  function update() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
+    const now = performance.now() - state.epoch;
+
     if (DEBUG) {
+      const dt = now - state.now;
       fps.update(dt);
       updateCamera(dt);
     }
+
+    state.now = now;
 
     updateMaskTexture(device, maskTexture, maskTextureContext, state.now);
     updateFFT();
@@ -347,15 +247,11 @@ async function main() {
   }
 
   function render() {
-    state.now = performance.now() - state.epoch;
-    const dt = (state.now - state.lastRenderTime) / 1000;
-    state.lastRenderTime = state.now;
-
     if (state.halt) {
       return;
     }
 
-    update(dt);
+    update();
 
     const commandEncoder = device.createCommandEncoder();
 
@@ -381,30 +277,6 @@ async function main() {
       context.getCurrentTexture(),
       "ascii filter pass"
     );
-
-    // dispatchRenderPass(
-    //   commandEncoder,
-    //   brightnessPassPipeline,
-    //   brightnessPassBindGroup,
-    //   brightnessPassTexture,
-    //   "brightness filter pass"
-    // );
-
-    // dispatchRenderPass(
-    //   commandEncoder,
-    //   blurPassPipeline,
-    //   blurPassBindGroup,
-    //   blurPassTexture,
-    //   "gaussian blur filter pass"
-    // );
-
-    // dispatchRenderPass(
-    //   commandEncoder,
-    //   bloomPassPipeline,
-    //   bloomPassBindGroup,
-    //   context.getCurrentTexture(),
-    //   "bloom filter pass"
-    // );
 
     device.queue.submit([commandEncoder.finish()]);
 
@@ -479,7 +351,7 @@ async function main() {
       z: direction.z / magnitude,
     };
 
-    const SPEED = 5.0;
+    const SPEED = 0.005;
 
     // matikka on kyl päin vittua, mutta mitä sitten
     if (state.keyboard.forward) {
@@ -558,20 +430,6 @@ async function main() {
         state.ascii.edges,
       ])
     );
-    // device.queue.writeBuffer(
-    //   bloomUniformsBuffer,
-    //   0,
-    //   new Float32Array([
-    //     state.bloom.threshold,
-    //     state.bloom.burn,
-    //     state.bloom.amplify,
-    //     0,
-    //     state.bloom.color.red,
-    //     state.bloom.color.green,
-    //     state.bloom.color.blue,
-    //     0,
-    //   ])
-    // );
   }
 
   function setupKeyboardListener(audioCtx) {
@@ -754,7 +612,6 @@ async function main() {
       "BFLORRY",
       "NINNNU",
       "SHIONA",
-      "MASKA",
     ].join("                                ");
     ctx.fillText(
       message,

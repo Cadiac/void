@@ -24,7 +24,7 @@ function setup() {
 }
 
 function update(dt) {
-  const fps = 1 / dt;
+  const fps = 1000 / dt;
 
   fpsCounter.total += fps - (fpsCounter.frames[fpsCounter.cursor] || 0);
   fpsCounter.frames[fpsCounter.cursor++] = fps;
