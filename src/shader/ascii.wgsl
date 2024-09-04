@@ -35,7 +35,6 @@ fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
     let quantized = floor(luminance * 10) / 10;
     let offset = i32(min(quantized, 0.9) * 80);
 
-    let asciiPixel = textureLoad(asciiTexture, vec2i(FragCoord.xy % 8) + vec2i(offset, 0), 0);
     let sobel = textureLoad(sobelTexture, vec2i(FragCoord.xy), 0);
 
     var base = uniforms.background * color;
@@ -56,6 +55,7 @@ fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
 
         base += edgePixel * color * uniforms.edges;
     } else {
+        let asciiPixel = textureLoad(asciiTexture, vec2i(FragCoord.xy % 8) + vec2i(offset, 0), 0);
         base += asciiPixel * color * uniforms.fill;
     }
 

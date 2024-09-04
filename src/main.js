@@ -173,35 +173,38 @@ async function main() {
   );
 
   // Inlined ascii texture creation
-  const asciiTextureContext = document.createElement("canvas").getContext("2d");
+  const asciiTextureSource = document.createElement("canvas");
+  const asciiTextureContext = asciiTextureSource.getContext("2d");
 
   const characters = " .:coePO0■|/-\\";
 
   const width = 8 * characters.length;
   const height = 8;
-  asciiTextureContext.canvas.width = width;
-  asciiTextureContext.canvas.height = height;
-  asciiTextureContext.canvas.style["image-rendering"] = "pixelated";
 
   asciiTextureContext.fillStyle = "#000";
-  asciiTextureContext.fillRect(0, 0, width, height);
+
+  asciiTextureContext.fillRect(
+    0,
+    0,
+    (asciiTextureSource.width = width),
+    (asciiTextureSource.height = height)
+  );
 
   asciiTextureContext.fillStyle = "#fff";
   asciiTextureContext.font = "8px monospace";
   asciiTextureContext.textAlign = "center";
-  asciiTextureContext.textBaseline = "middle";
 
-  asciiTextureContext.imageSmoothingEnabled = false;
+  // asciiTextureContext.textBaseline = "middle";
+  // asciiTextureSource.style["image-rendering"] = "pixelated";
+  // asciiTextureContext.imageSmoothingEnabled = false;
 
   const charWidth = width / characters.length;
   const halfCharWidth = charWidth / 2;
 
   for (let i = 0; i < characters.length; i++) {
     const x = i * charWidth + halfCharWidth;
-    asciiTextureContext.fillText(characters[i], x, height / 2 + 1);
+    asciiTextureContext.fillText(characters[i], x, height / 2 + 3);
   }
-
-  const asciiTextureSource = asciiTextureContext.canvas;
 
   const asciiTexture = createTexture(
     asciiTextureSource,
@@ -228,9 +231,6 @@ async function main() {
   render();
 
   function update() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
     const now = performance.now() - state.epoch;
 
     if (DEBUG) {
