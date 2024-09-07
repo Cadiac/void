@@ -7,7 +7,7 @@ let o;
 // Loads the Sointu WebAssembly module,
 // generates the music and stores the audio to "o".
 // This has to be called and it has to be finished before "setupAudio" is called.
-export const loadSointuWasm = async (canvas, init) => {
+export const loadAudio = async (canvas, init) => {
   if (!AUDIO) {
     document.body.append(canvas);
     init();
@@ -42,7 +42,7 @@ export const loadSointuWasm = async (canvas, init) => {
   }
 };
 
-export const startAudio = () => {
+export const startSointu = () => {
   if (!AUDIO) {
     const audioCtx = new AudioContext();
     const analyser = new AnalyserNode(audioCtx);

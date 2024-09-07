@@ -4,20 +4,11 @@ set -e
 AUDIO=true
 TOUCH=false
 DEBUG=false
+USE_SOINTU=false
+USE_BROTLI=true
 
 mkdir -p tmp
 mkdir -p entry
-
-sointu-compile -o tmp/ -arch=wasm audio/song.yml
-
-wat2wasm tmp/song.wat -o tmp/song.wasm
-
-wasm-opt --enable-bulk-memory \
-    --enable-multivalue \
-    --strip-debug \
-    --disable-gc \
-    -O tmp/song.wasm \
-    -o tmp/song_optimized.wasm
 
 wgslminify -e vs src/shader/vertex.wgsl > tmp/vertex.min.wgsl
 wgslminify -e fs src/shader/raymarch.wgsl > tmp/raymarch.min.wgsl
@@ -47,9 +38,33 @@ java -jar tools/closure-compiler/closure-compiler-v20231112.jar \
     --js_output_file tmp/bundle.min.js
 
 if [ "$AUDIO" = "true" ]; then
-    ruby tools/png/pnginator.rb tmp/bundle.min.js tmp/song_optimized.wasm entry/index.html
+    if [ "$USE_SOINTU" = "true" ]; then
+        sointu-compile -o tmp/ -arch=wasm audio/song.yml
+
+        wat2wasm tmp/song.wat -o tmp/song.wasm
+
+        wasm-opt --enable-bulk-memory \
+            --enable-multivalue \
+            --strip-debug \
+            --disable-gc \
+            -O tmp/song.wasm \
+            -o tmp/song_optimized.wasm
+
+        ruby tools/png/pnginator.rb tmp/bundle.min.js tmp/song_optimized.wasm entry/index.html
+    else
+        if [ "$USE_BROTLI" ]; then
+            printf 'Loading...<script>' > tmp/index.html
+            cat tmp/bundle.min.js >> tmp/index.html
+            printf '</script>' >> tmp/index.html
+            
+            brotli -f -Z -o entry/index.html tmp/index.html
+        else
+            ruby tools/png/pnginator.rb tmp/bundle.min.js entry/index.html
+        fi
+    fi
 else
     ruby tools/png/pnginator.rb tmp/bundle.min.js entry/index.html
 fi
 
+wc -c tmp/index.html
 wc -c entry/index.html

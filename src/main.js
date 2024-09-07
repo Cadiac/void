@@ -1,10 +1,12 @@
-import { loadSointuWasm, startAudio } from "./audio.js";
 import debug from "./debug.js";
 import fps from "./fps.js";
 
 const canvas = createMainCanvas();
 
 const DEBUG = true;
+
+// import { loadAudio, startAudio } from "./sointu.js";
+import { loadAudio, startAudio } from "./soundbox.js";
 
 const state = {
   halt: false,
@@ -52,7 +54,7 @@ const state = {
   },
 };
 
-loadSointuWasm(canvas, main);
+loadAudio(canvas, main);
 
 async function main() {
   if (state.now > 0) {
