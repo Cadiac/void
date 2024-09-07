@@ -24,7 +24,7 @@ const state = {
   },
   ascii: {
     background: 1.0,
-    threshold: 0.2,
+    // threshold: 0.2,
     fill: 0.5,
     edges: 1,
   },
@@ -137,11 +137,6 @@ async function main() {
     DEBUG ? "sobel texture" : undefined
   );
 
-  const asciiUniformsBuffer = device.createBuffer({
-    size: 4 * 4,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-
   const sobelShaderCode = DEBUG
     ? await fetch("src/shader/sobel.wgsl").then((res) => res.text())
     : MINIFIED_SOBEL_SHADER;
@@ -157,10 +152,14 @@ async function main() {
       raymarchPassTexture.createView(),
       sobelTexture.createView(),
       maskTexture.createView(),
-      { buffer: asciiUniformsBuffer },
     ],
     "sobel filter compute bind group"
   );
+
+  const asciiUniformsBuffer = device.createBuffer({
+    size: 4 * 4,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
 
   const asciiShaderCode = DEBUG
     ? await fetch("src/shader/ascii.wgsl").then((res) => res.text())
@@ -424,7 +423,6 @@ async function main() {
       asciiUniformsBuffer,
       0,
       new Float32Array([
-        state.ascii.threshold,
         state.ascii.background,
         state.ascii.fill,
         state.ascii.edges,

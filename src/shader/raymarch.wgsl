@@ -143,7 +143,7 @@ fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
 
             // Fade to fog further away
             let dist = (25000. - uniforms.camera.y) / dir.y;
-            let e = exp2(-abs(dist) * EPSILON * vec3(0.1));
+            let e = exp2(-abs(dist) * vec3(0.0001));
             sky_color = sky_color * e + (1.0 - e) * vec3(0.98, 1.0, 0.96);
 
             // Sun
@@ -169,28 +169,34 @@ fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
         rayDist += dist;
 
         // Soft shadows
-        var shadow = 1.0;
-        var depth = 1.0;
+        // var shadow = 1.0;
+        // var depth = 1.0;
 
-        for (var s = 0; s < 250; s++) {
-            if depth >= MAX_DIST {
-                break;
-            }
+        // for (var s = 0; s < 250; s++) {
+        //     if depth >= MAX_DIST {
+        //         break;
+        //     }
 
-            let dist = scene(pos + depth * sunDir);
-            if dist < EPSILON {
-                shadow = 0.0;
-                break;
-            }
-            shadow = min(shadow, 50.0 * dist / depth);
-            depth += dist;
-        }
+        //     let dist = scene(pos + depth * sunDir);
+        //     if dist < EPSILON {
+        //         shadow = 0.0;
+        //         break;
+        //     }
+        //     shadow = min(shadow, 50.0 * dist / depth);
+        //     depth += dist;
+        // }
 
         let e = exp2(-rayDist * 0.05 * vec3(1.0));                                                  // Fog
+        // color = mix(color, (
+        //     vec3(0.0) +                                                                             // Ambient
+        //     vec3(0.1) * clamp(dot(sunDir, normal) * shadow, 0.0, 1.0) +                             // Diffuse
+        //     vec3(0.8) * pow(clamp(dot(reflect(sunDir, normal) * shadow, dir), 0.0, 1.0), 10.0)      // Specular
+        // ) * e + (1.0 - e) * vec3(0.98, 1.0, 0.96), reflection);                                     // Fog color
+
         color = mix(color, (
             vec3(0.0) +                                                                             // Ambient
-            vec3(0.1) * clamp(dot(sunDir, normal) * shadow, 0.0, 1.0) +                             // Diffuse
-            vec3(0.8) * pow(clamp(dot(reflect(sunDir, normal) * shadow, dir), 0.0, 1.0), 10.0)      // Specular
+            vec3(0.1) * clamp(dot(sunDir, normal), 0.0, 1.0) +                                      // Diffuse
+            vec3(0.8) * pow(clamp(dot(reflect(sunDir, normal), dir), 0.0, 1.0), 10.0)               // Specular
         ) * e + (1.0 - e) * vec3(0.98, 1.0, 0.96), reflection);                                     // Fog color
 
         reflection *= 0.5;
