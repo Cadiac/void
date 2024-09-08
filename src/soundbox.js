@@ -2,8 +2,6 @@ const DEBUG = true;
 const TOUCH = false;
 const AUDIO = true;
 
-let o;
-
 /* -*- mode: javascript; tab-width: 4; indent-tabs-mode: nil; -*-
  *
  * Copyright (c) 2011-2013 Marcus Geelnard
@@ -28,15 +26,6 @@ let o;
  *    distribution.
  *
  */
-
-// Some general notes and recommendations:
-//  * This code uses modern ECMAScript features, such as ** instead of
-//    Math.pow(). You may have to modify the code to make it work on older
-//    browsers.
-//  * If you're not using all the functionality (e.g. not all oscillator types,
-//    or certain effects), you can reduce the size of the player routine even
-//    further by deleting the code.
-
 const CPlayer = function () {
   //--------------------------------------------------------------------------
   // Private methods
@@ -405,20 +394,20 @@ const CPlayer = function () {
   };
 
   // Get n samples of wave data at time t [s]. Wave data in range [-2,2].
-  this.getData = function (t, n) {
-    var i = 2 * Math.floor(t * 44100);
-    var d = new Array(n);
-    for (var j = 0; j < 2 * n; j += 1) {
-      var k = i + j;
-      d[j] = t > 0 && k < mMixBuf.length ? mMixBuf[k] / 32768 : 0;
-    }
-    return d;
-  };
+  // this.getData = function (t, n) {
+  //   var i = 2 * Math.floor(t * 44100);
+  //   var d = new Array(n);
+  //   for (var j = 0; j < 2 * n; j += 1) {
+  //     var k = i + j;
+  //     d[j] = t > 0 && k < mMixBuf.length ? mMixBuf[k] / 32768 : 0;
+  //   }
+  //   return d;
+  // };
 };
 
 // Loads the Soundbox synth module, and generates the music.
 // This has to be called and it has to be finished before "setupAudio" is called.
-export const loadAudio = async (canvas, init) => {
+export const loadAudio = (canvas, init) => {
   if (!AUDIO) {
     document.body.append(canvas);
     init();
@@ -472,24 +461,25 @@ export const loadAudio = async (canvas, init) => {
     numChannels: 1, // Number of channels
   };
 
+  let player;
   if (DEBUG) {
     const t0 = new Date();
 
-    o = new CPlayer();
+    player = new CPlayer();
 
-    o.init(song);
+    player.init(song);
 
-    while (o.generate() < 1);
+    while (player.generate() < 1);
 
     const t1 = new Date();
 
     console.debug(`Audio instantiated in ${t1 - t0} ms`);
   } else {
-    o = new CPlayer();
+    player = new CPlayer();
 
-    o.init(song);
+    player.init(song);
 
-    while (o.generate() < 1);
+    while (player.generate() < 1);
   }
 
   document.body.innerHTML = "Click!";
@@ -502,9 +492,11 @@ export const loadAudio = async (canvas, init) => {
   } else {
     canvas.onclick = init;
   }
+
+  return player;
 };
 
-export const startAudio = () => {
+export const startAudio = (player) => {
   if (!AUDIO) {
     const audioCtx = new AudioContext();
     const analyser = new AnalyserNode(audioCtx);
@@ -516,7 +508,7 @@ export const startAudio = () => {
   }
 
   // Put the generated song in an Audio element.
-  const wave = o.createWave();
+  const wave = player.createWave();
   const audio = document.createElement("audio");
   audio.src = URL.createObjectURL(new Blob([wave], { type: "audio/wav" }));
   audio.loop = true;

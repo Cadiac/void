@@ -54,7 +54,7 @@ const state = {
   },
 };
 
-loadAudio(canvas, main);
+const player = loadAudio(canvas, main);
 
 async function main() {
   if (state.now > 0) {
@@ -70,7 +70,7 @@ async function main() {
     debug.setup(state);
   }
 
-  const { analyser, audioCtx } = startAudio();
+  const { analyser, audioCtx } = startAudio(player);
   analyser.fftSize = 256;
   const fftDataArray = new Uint8Array(analyser.frequencyBinCount);
 
@@ -604,14 +604,16 @@ async function main() {
     ctx.fillStyle = "#000";
 
     const message = [
-      "GREETINGS TO:",
-      "PAPU",
-      "PUMPULI",
-      "SAMPOZKI",
-      "BFLORRY",
-      "NINNNU",
-      "SHIONA",
+      "LOREM",
+      "IPSUM",
+      "DOLOR",
+      "SIT",
+      "AMET,",
+      "CONSECTETUR",
+      "ADIPISCING",
+      "ELIT",
     ].join("                                ");
+
     ctx.fillText(
       message,
       5000 - ((state.now / 2) % 20000),
