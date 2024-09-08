@@ -90,7 +90,7 @@ var osc_tri = (value) => {
 };
 
 // 174.61.. / 44100 = 0.003959503758 (F3)
-var getnotefreq = (n) => 0.003959503758 * 2 ** ((n - 128) / 12);
+var getnotefreq = (n) => 0.00396 * 2 ** ((n - 128) / 12);
 
 var createNote = (instr, n, rowLen) => {
   var osc1 = mOscillators[instr.i[0]],

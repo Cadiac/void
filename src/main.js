@@ -78,21 +78,61 @@ async function main() {
     setupKeyboardListener(audioCtx);
   }
 
-  const { device, format, presentationFormat, context } = await setupWebGPU();
+  const adapter = await navigator.gpu.requestAdapter();
+  const device = await adapter.requestDevice();
+
+  const context = canvas.getContext("webgpu");
+  const format = "rgba8unorm";
+  const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+  context.configure({
+    device,
+    format: presentationFormat,
+  });
 
   const vertexShaderCode = DEBUG
     ? await fetch("src/shader/vertex.wgsl").then((res) => res.text())
     : MINIFIED_VERTEX_SHADER;
 
-  // Raymarch
+  // Textures
 
-  const raymarchPassTexture = createTexture(
-    canvas,
-    GPUTextureUsage.TEXTURE_BINDING |
+  const raymarchPassTexture = device.createTexture({
+    format,
+    size: [canvas.width, canvas.height],
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING |
       GPUTextureUsage.COPY_DST |
       GPUTextureUsage.RENDER_ATTACHMENT,
-    DEBUG ? "raymarch texture" : undefined
-  );
+  });
+
+  const maskTexture = device.createTexture({
+    format,
+    size: [canvas.width, canvas.height],
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.COPY_DST |
+      GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+
+  const sobelTexture = device.createTexture({
+    format,
+    size: [canvas.width, canvas.height],
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.STORAGE_BINDING |
+      GPUTextureUsage.COPY_SRC,
+  });
+
+  const asciiTexture = device.createTexture({
+    format,
+    size: [canvas.width, canvas.height],
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.COPY_DST |
+      GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+
+  // Raymarch
 
   const raymarchUniformsBuffer = device.createBuffer({
     size: 3 * 4 * 4,
@@ -120,24 +160,6 @@ async function main() {
   const maskTextureContext = document.createElement("canvas").getContext("2d");
   maskTextureContext.canvas.width = canvas.width;
   maskTextureContext.canvas.height = canvas.height;
-
-  const maskTextureSource = maskTextureContext.canvas;
-
-  const maskTexture = createTexture(
-    maskTextureSource,
-    GPUTextureUsage.TEXTURE_BINDING |
-      GPUTextureUsage.COPY_DST |
-      GPUTextureUsage.RENDER_ATTACHMENT,
-    DEBUG ? "mask texture" : undefined
-  );
-
-  const sobelTexture = createTexture(
-    canvas,
-    GPUTextureUsage.TEXTURE_BINDING |
-      GPUTextureUsage.STORAGE_BINDING |
-      GPUTextureUsage.COPY_SRC,
-    DEBUG ? "sobel texture" : undefined
-  );
 
   const sobelShaderCode = DEBUG
     ? await fetch("src/shader/sobel.wgsl").then((res) => res.text())
@@ -174,23 +196,21 @@ async function main() {
   );
 
   // Inlined ascii texture creation
+  const characters = " .:coePO0■|/-\\";
+
   const asciiTextureSource = document.createElement("canvas");
   const asciiTextureContext = asciiTextureSource.getContext("2d");
-
-  const characters = " .:coePO0■|/-\\";
 
   const width = 8 * characters.length;
   const height = 8;
 
   asciiTextureContext.fillStyle = "#000";
-
   asciiTextureContext.fillRect(
     0,
     0,
     (asciiTextureSource.width = width),
     (asciiTextureSource.height = height)
   );
-
   asciiTextureContext.fillStyle = "#fff";
   asciiTextureContext.font = "8px monospace";
   asciiTextureContext.textAlign = "center";
@@ -207,13 +227,6 @@ async function main() {
     asciiTextureContext.fillText(characters[i], x, height / 2 + 3);
   }
 
-  const asciiTexture = createTexture(
-    asciiTextureSource,
-    GPUTextureUsage.TEXTURE_BINDING |
-      GPUTextureUsage.COPY_DST |
-      GPUTextureUsage.RENDER_ATTACHMENT,
-    DEBUG ? "ascii texture" : undefined
-  );
   copySourceToTexture(device, asciiTexture, asciiTextureSource);
 
   const asciiBindGroup = createBindGroup(
@@ -231,7 +244,12 @@ async function main() {
   // Start the render loop
   render();
 
-  function update() {
+  function render() {
+    if (state.halt) {
+      return;
+    }
+
+    // update();
     const now = performance.now() - state.epoch;
 
     if (DEBUG) {
@@ -242,17 +260,9 @@ async function main() {
 
     state.now = now;
 
-    updateMaskTexture(device, maskTexture, maskTextureContext, state.now);
+    updateMaskTexture(device, maskTexture, maskTextureContext);
     updateFFT();
     updateUniforms();
-  }
-
-  function render() {
-    if (state.halt) {
-      return;
-    }
-
-    update();
 
     const commandEncoder = device.createCommandEncoder();
 
@@ -282,38 +292,6 @@ async function main() {
     device.queue.submit([commandEncoder.finish()]);
 
     window.requestAnimationFrame(render);
-  }
-
-  async function setupWebGPU() {
-    const adapter = await navigator.gpu.requestAdapter();
-    const device = await adapter.requestDevice();
-
-    const context = canvas.getContext("webgpu");
-    const format = "rgba8unorm";
-    const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-    context.configure({
-      device,
-      format: presentationFormat,
-    });
-    return { device, format, presentationFormat, context };
-  }
-
-  function createTexture(source, usage, label) {
-    return device.createTexture(
-      DEBUG
-        ? {
-            label,
-            format,
-            size: [source.width, source.height],
-            usage,
-          }
-        : {
-            format,
-            size: [source.width, source.height],
-            usage,
-          }
-    );
   }
 
   function createBindGroup(pipeline, resources, label) {
@@ -583,7 +561,7 @@ async function main() {
     return pipeline;
   }
 
-  function updateMaskTexture(device, maskTexture, ctx, time) {
+  function updateMaskTexture(device, maskTexture, ctx) {
     const { width, height } = ctx.canvas;
 
     // ctx.fillStyle = "#000";
