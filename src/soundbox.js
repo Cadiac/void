@@ -48,9 +48,9 @@ const song = {
   endPattern: 0, // End pattern
   numChannels: 1, // Number of channels
 };
-let songGenerationCol = 0;
-let songNumWords = song.rowLen * song.patternLen * (song.endPattern + 1) * 2;
-let songMixBuf = new Int32Array(songNumWords);
+var songGenerationCol = 0;
+var songNumWords = song.rowLen * song.patternLen * (song.endPattern + 1) * 2;
+var songMixBuf = new Int32Array(songNumWords);
 
 // Modified player-small.js synth from Soundbox project. Original license:
 /* Copyright (c) 2011-2013 Marcus Geelnard
@@ -80,19 +80,19 @@ let songMixBuf = new Int32Array(songNumWords);
 //--------------------------------------------------------------------------
 
 // Oscillators
-const osc_sin = (value) => Math.sin(value * 6.283184);
-const osc_saw = (value) => 2 * (value % 1) - 1;
-const osc_square = (value) => (value % 1 < 0.5 ? 1 : -1);
-const osc_tri = (value) => {
-  const v2 = (value % 1) * 4;
+var osc_sin = (value) => Math.sin(value * 6.283184);
+var osc_saw = (value) => 2 * (value % 1) - 1;
+var osc_square = (value) => (value % 1 < 0.5 ? 1 : -1);
+var osc_tri = (value) => {
+  var v2 = (value % 1) * 4;
   if (v2 < 2) return v2 - 1;
   return 3 - v2;
 };
 
 // 174.61.. / 44100 = 0.003959503758 (F3)
-const getnotefreq = (n) => 0.003959503758 * 2 ** ((n - 128) / 12);
+var getnotefreq = (n) => 0.003959503758 * 2 ** ((n - 128) / 12);
 
-const createNote = (instr, n, rowLen) => {
+var createNote = (instr, n, rowLen) => {
   var osc1 = mOscillators[instr.i[0]],
     o1vol = instr.i[1],
     o1xenv = instr.i[3] / 32,
@@ -165,14 +165,14 @@ const createNote = (instr, n, rowLen) => {
 //--------------------------------------------------------------------------
 
 // Array of oscillator functions
-const mOscillators = [osc_sin, osc_square, osc_saw, osc_tri];
+var mOscillators = [osc_sin, osc_square, osc_saw, osc_tri];
 
 //--------------------------------------------------------------------------
 // Public methods
 //--------------------------------------------------------------------------
 
 // Generate audio data for a single track
-const generate = () => {
+var generate = () => {
   // Local variables
   var i, j, p, row, col, n, cp, k, t, rsample, rowStartSample, f;
 
@@ -311,7 +311,7 @@ const generate = () => {
 
 // Loads the Soundbox synth module, and generates the music.
 // This has to be called and it has to be finished before "setupAudio" is called.
-export const loadAudio = (canvas, init) => {
+export var loadAudio = (canvas, init) => {
   if (!AUDIO) {
     document.body.append(canvas);
     init();
@@ -319,11 +319,11 @@ export const loadAudio = (canvas, init) => {
   }
 
   if (DEBUG) {
-    const t0 = new Date();
+    var t0 = new Date();
 
     while (generate() < 1);
 
-    const t1 = new Date();
+    var t1 = new Date();
 
     console.debug(`Audio instantiated in ${t1 - t0} ms`);
   } else {
@@ -342,10 +342,10 @@ export const loadAudio = (canvas, init) => {
   }
 };
 
-export const startAudio = () => {
+export var startAudio = () => {
   if (!AUDIO) {
-    const audioCtx = new AudioContext();
-    const analyser = new AnalyserNode(audioCtx);
+    var audioCtx = new AudioContext();
+    var analyser = new AnalyserNode(audioCtx);
 
     return {
       audioCtx,
@@ -353,22 +353,22 @@ export const startAudio = () => {
     };
   }
 
-  const audioCtx = new AudioContext();
-  const audio = audioCtx.createBufferSource();
+  var audioCtx = new AudioContext();
+  var audio = audioCtx.createBufferSource();
 
   // Create a AudioBuffer from the generated audio data
-  const buffer = audioCtx.createBuffer(2, songNumWords / 2, 44100);
-  const channel0 = buffer.getChannelData(0);
-  const channel1 = buffer.getChannelData(1);
+  var buffer = audioCtx.createBuffer(2, songNumWords / 2, 44100);
+  var channel0 = buffer.getChannelData(0);
+  var channel1 = buffer.getChannelData(1);
 
-  for (let i = 0; i < songNumWords / 2; i++) {
+  for (var i = 0; i < songNumWords / 2; i++) {
     channel0[i] = songMixBuf[i * 2] / 65536;
     channel1[i] = songMixBuf[i * 2 + 1] / 65536;
   }
 
   audio.buffer = buffer;
 
-  const analyser = new AnalyserNode(audioCtx);
+  var analyser = new AnalyserNode(audioCtx);
   analyser.connect(audioCtx.destination);
   audio.connect(analyser);
 
