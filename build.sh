@@ -10,10 +10,10 @@ USE_BROTLI=true
 mkdir -p tmp
 mkdir -p entry
 
-wgslminify -e vs src/shader/vertex.wgsl > tmp/vertex.min.wgsl
-wgslminify -e fs src/shader/raymarch.wgsl > tmp/raymarch.min.wgsl
-wgslminify -e main src/shader/sobel.wgsl > tmp/sobel.min.wgsl
-wgslminify -e fs src/shader/ascii.wgsl > tmp/ascii.min.wgsl
+wgslminify -e f src/shader/vertex.wgsl > tmp/vertex.min.wgsl
+wgslminify -e f src/shader/raymarch.wgsl > tmp/raymarch.min.wgsl
+wgslminify -e f src/shader/sobel.wgsl > tmp/sobel.min.wgsl
+wgslminify -e f src/shader/ascii.wgsl > tmp/ascii.min.wgsl
 
 DEBUG=$DEBUG \
     AUDIO=$AUDIO \
@@ -58,7 +58,7 @@ if [ "$AUDIO" = "true" ]; then
             printf '</script>' >> tmp/index.html
             
             brotli -f -Z -o entry/index.html tmp/index.html
-            ruby tools/png/pnginator.rb tmp/bundle.min.js entry/index.html.png
+            ruby tools/png/pnginator.rb tmp/bundle.min.js entry/index.png.html
         else
             ruby tools/png/pnginator.rb tmp/bundle.min.js entry/index.html
         fi
@@ -68,5 +68,5 @@ else
 fi
 
 wc -c tmp/index.html
-wc -c entry/index.html.png
+wc -c entry/index.png.html
 wc -c entry/index.html

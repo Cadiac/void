@@ -530,11 +530,9 @@ async function main() {
             layout: "auto",
             vertex: {
               module: vertexShaderModule,
-              entryPoint: "vs",
             },
             fragment: {
               module: shaderModule,
-              entryPoint: "fs",
               targets: [{ format }],
             },
           }
@@ -542,11 +540,9 @@ async function main() {
             layout: "auto",
             vertex: {
               module: vertexShaderModule,
-              entryPoint: "vs",
             },
             fragment: {
               module: shaderModule,
-              entryPoint: "fs",
               targets: [{ format }],
             },
           }
@@ -574,14 +570,12 @@ async function main() {
             layout: "auto",
             compute: {
               module: shaderModule,
-              entryPoint: "main",
             },
           }
         : {
             layout: "auto",
             compute: {
               module: shaderModule,
-              entryPoint: "main",
             },
           }
     );

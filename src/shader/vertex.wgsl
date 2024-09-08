@@ -8,6 +8,6 @@ const uv = array(
 );
 
 @vertex
-fn vs(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4f {
+fn f(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4f {
     return vec4f(uv[vertexIndex], 0.0, 1.0);
 }

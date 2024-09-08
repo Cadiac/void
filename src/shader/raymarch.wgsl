@@ -113,16 +113,16 @@ fn rayMarch(pos: vec3f, rayDir: vec3f) -> f32 {
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
 @fragment
-fn fs(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
+fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
     // let uv = FragCoord.xy - uniforms.resolution.xy / 2.0;
     // let w = uniforms.resolution.y / tan(radians(60.0) / 2.0);
 
     // lookAt
     // let s = normalize(cross(normalize(vec3(0.0, -1.0, 0.0)), f));
-    let f = normalize(uniforms.lookAt - uniforms.camera);
-    let s = normalize(cross(vec3(0.0, -1.0, 0.0), f));
+    let l = normalize(uniforms.lookAt - uniforms.camera);
+    let s = normalize(cross(vec3(0.0, -1.0, 0.0), l));
     var dir = (mat4x4(
-        vec4(s, .0), vec4(cross(f, s), .0), vec4(-f, .0), vec4(.0, .0, .0, 1.)) *                                       // viewToWorld
+        vec4(s, .0), vec4(cross(l, s), .0), vec4(-l, .0), vec4(.0, .0, .0, 1.)) *                                       // viewToWorld
         vec4(normalize(vec3(FragCoord.xy - uniforms.resolution.xy / 2.0, -(uniforms.resolution.y / 0.6))), 0.0)).xyz;   // viewDir
 
     let sunDir = normalize(vec3(1, 2, 3));

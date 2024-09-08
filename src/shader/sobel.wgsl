@@ -5,7 +5,7 @@
 var<workgroup> sharedDirectionCounts: array<atomic<u32>, 8>;
 
 @compute @workgroup_size(8, 8)
-fn main(@builtin(global_invocation_id) global_id: vec3u) {
+fn f(@builtin(global_invocation_id) global_id: vec3u) {
     var xy = vec2f(0);
     // var y = 0.0;
     let pos = vec2i(global_id.xy);
