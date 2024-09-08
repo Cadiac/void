@@ -53,11 +53,12 @@ if [ "$AUDIO" = "true" ]; then
         ruby tools/png/pnginator.rb tmp/bundle.min.js tmp/song_optimized.wasm entry/index.html
     else
         if [ "$USE_BROTLI" ]; then
-            printf 'Loading...<script>' > tmp/index.html
+            printf '...<script>' > tmp/index.html
             cat tmp/bundle.min.js >> tmp/index.html
             printf '</script>' >> tmp/index.html
             
             brotli -f -Z -o entry/index.html tmp/index.html
+            ruby tools/png/pnginator.rb tmp/bundle.min.js entry/index.html.png
         else
             ruby tools/png/pnginator.rb tmp/bundle.min.js entry/index.html
         fi
@@ -67,4 +68,5 @@ else
 fi
 
 wc -c tmp/index.html
+wc -c entry/index.html.png
 wc -c entry/index.html

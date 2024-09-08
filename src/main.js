@@ -54,7 +54,7 @@ const state = {
   },
 };
 
-const player = loadAudio(canvas, main);
+loadAudio(canvas, main);
 
 async function main() {
   if (state.now > 0) {
@@ -70,7 +70,7 @@ async function main() {
     debug.setup(state);
   }
 
-  const { analyser, audioCtx } = startAudio(player);
+  const { analyser, audioCtx } = startAudio();
   analyser.fftSize = 256;
   const fftDataArray = new Uint8Array(analyser.frequencyBinCount);
 

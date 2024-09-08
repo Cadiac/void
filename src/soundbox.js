@@ -2,9 +2,58 @@ const DEBUG = true;
 const TOUCH = false;
 const AUDIO = true;
 
-/* -*- mode: javascript; tab-width: 4; indent-tabs-mode: nil; -*-
- *
- * Copyright (c) 2011-2013 Marcus Geelnard
+const song = {
+  songData: [
+    {
+      // Instrument 0
+      i: [
+        0, // OSC1_WAVEFORM
+        192, // OSC1_VOL
+        104, // OSC1_SEMI
+        64, // OSC1_XENV
+        0, // OSC2_WAVEFORM
+        80, // OSC2_VOL
+        99, // OSC2_SEMI
+        0, // OSC2_DETUNE
+        0, // OSC2_XENV
+        0, // NOISE_VOL
+        4, // ENV_ATTACK
+        0, // ENV_SUSTAIN
+        66, // ENV_RELEASE
+        0, // ENV_EXP_DECAY
+        0, // ARP_CHORD
+        0, // ARP_SPEED
+        3, // LFO_WAVEFORM
+        0, // LFO_AMT
+        0, // LFO_FREQ
+        0, // LFO_FX_FREQ
+        1, // FX_FILTER
+        0, // FX_FREQ
+        1, // FX_RESONANCE
+        2, // FX_DIST
+        32, // FX_DRIVE
+        37, // FX_PAN_AMT
+        4, // FX_PAN_FREQ
+        0, // FX_DELAY_AMT
+        0, // FX_DELAY_TIME
+      ],
+      // Patterns
+      p: [1],
+      // Columns
+      c: [{ n: [135, 135], f: [] }],
+    },
+  ],
+  rowLen: 6615, // In sample lengths
+  patternLen: 16, // Rows per pattern
+  endPattern: 0, // End pattern
+  numChannels: 1, // Number of channels
+};
+let songGenerationCol = 0;
+let songNumWords = song.rowLen * song.patternLen * (song.endPattern + 1) * 2;
+let songMixBuf = new Int32Array(songNumWords);
+
+// Modified player-small.js synth from Soundbox project. Original license:
+/* Copyright (c) 2011-2013 Marcus Geelnard
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -78,7 +127,7 @@ const CPlayer = function () {
       c2 = 0;
 
     // Local variables.
-    var j, j2, e, t, rsample, o1t, o2t;
+    var j, j2, e, rsample, o1t, o2t;
 
     // Generate one note (attack + sustain + release)
     for (j = 0, j2 = 0; j < attack + sustain + release; j++, j2++) {
@@ -130,28 +179,6 @@ const CPlayer = function () {
   // Array of oscillator functions
   var mOscillators = [osc_sin, osc_square, osc_saw, osc_tri];
 
-  // Private variables set up by init()
-  var mSong, mLastRow, mCurrentCol, mNumWords, mMixBuf;
-
-  //--------------------------------------------------------------------------
-  // Initialization
-  //--------------------------------------------------------------------------
-
-  this.init = function (song) {
-    // Define the song
-    mSong = song;
-
-    // Init iteration state variables
-    mLastRow = song.endPattern;
-    mCurrentCol = 0;
-
-    // Prepare song info
-    mNumWords = song.rowLen * song.patternLen * (mLastRow + 1) * 2;
-
-    // Create work buffer (initially cleared)
-    mMixBuf = new Int32Array(mNumWords);
-  };
-
   //--------------------------------------------------------------------------
   // Public methods
   //--------------------------------------------------------------------------
@@ -159,29 +186,13 @@ const CPlayer = function () {
   // Generate audio data for a single track
   this.generate = function () {
     // Local variables
-    var i,
-      j,
-      b,
-      p,
-      row,
-      col,
-      n,
-      cp,
-      k,
-      t,
-      lfor,
-      e,
-      x,
-      rsample,
-      rowStartSample,
-      f,
-      da;
+    var i, j, p, row, col, n, cp, k, t, rsample, rowStartSample, f;
 
     // Put performance critical items in local variables
-    var chnBuf = new Int32Array(mNumWords),
-      instr = mSong.songData[mCurrentCol],
-      rowLen = mSong.rowLen,
-      patternLen = mSong.patternLen;
+    var chnBuf = new Int32Array(songNumWords),
+      instr = song.songData[songGenerationCol],
+      rowLen = song.rowLen,
+      patternLen = song.patternLen;
 
     // Clear effect state
     var low = 0,
@@ -194,7 +205,7 @@ const CPlayer = function () {
     var noteCache = [];
 
     // Patterns
-    for (p = 0; p <= mLastRow; ++p) {
+    for (p = 0; p <= song.endPattern; ++p) {
       cp = instr.p[p];
 
       // Pattern rows
@@ -303,106 +314,16 @@ const CPlayer = function () {
           chnBuf[k + 1] = rsample | 0;
 
           // ...and add to stereo mix buffer
-          mMixBuf[k] += lsample | 0;
-          mMixBuf[k + 1] += rsample | 0;
+          songMixBuf[k] += lsample | 0;
+          songMixBuf[k + 1] += rsample | 0;
         }
       }
     }
 
     // Next iteration. Return progress (1.0 == done!).
-    mCurrentCol++;
-    return mCurrentCol / mSong.numChannels;
+    songGenerationCol++;
+    return songGenerationCol / song.numChannels;
   };
-
-  // Create a AudioBuffer from the generated audio data
-  this.createAudioBuffer = function (context) {
-    var buffer = context.createBuffer(2, mNumWords / 2, 44100);
-    for (var i = 0; i < 2; i++) {
-      var data = buffer.getChannelData(i);
-      for (var j = i; j < mNumWords; j += 2) {
-        data[j >> 1] = mMixBuf[j] / 65536;
-      }
-    }
-    return buffer;
-  };
-
-  // Create a WAVE formatted Uint8Array from the generated audio data
-  this.createWave = function () {
-    // Create WAVE header
-    var headerLen = 44;
-    var l1 = headerLen + mNumWords * 2 - 8;
-    var l2 = l1 - 36;
-    var wave = new Uint8Array(headerLen + mNumWords * 2);
-    wave.set([
-      82,
-      73,
-      70,
-      70,
-      l1 & 255,
-      (l1 >> 8) & 255,
-      (l1 >> 16) & 255,
-      (l1 >> 24) & 255,
-      87,
-      65,
-      86,
-      69,
-      102,
-      109,
-      116,
-      32,
-      16,
-      0,
-      0,
-      0,
-      1,
-      0,
-      2,
-      0,
-      68,
-      172,
-      0,
-      0,
-      16,
-      177,
-      2,
-      0,
-      4,
-      0,
-      16,
-      0,
-      100,
-      97,
-      116,
-      97,
-      l2 & 255,
-      (l2 >> 8) & 255,
-      (l2 >> 16) & 255,
-      (l2 >> 24) & 255,
-    ]);
-
-    // Append actual wave data
-    for (var i = 0, idx = headerLen; i < mNumWords; ++i) {
-      // Note: We clamp here
-      var y = mMixBuf[i];
-      y = y < -32767 ? -32767 : y > 32767 ? 32767 : y;
-      wave[idx++] = y & 255;
-      wave[idx++] = (y >> 8) & 255;
-    }
-
-    // Return the WAVE formatted typed array
-    return wave;
-  };
-
-  // Get n samples of wave data at time t [s]. Wave data in range [-2,2].
-  // this.getData = function (t, n) {
-  //   var i = 2 * Math.floor(t * 44100);
-  //   var d = new Array(n);
-  //   for (var j = 0; j < 2 * n; j += 1) {
-  //     var k = i + j;
-  //     d[j] = t > 0 && k < mMixBuf.length ? mMixBuf[k] / 32768 : 0;
-  //   }
-  //   return d;
-  // };
 };
 
 // Loads the Soundbox synth module, and generates the music.
@@ -414,60 +335,11 @@ export const loadAudio = (canvas, init) => {
     return;
   }
 
-  var song = {
-    songData: [
-      {
-        // Instrument 0
-        i: [
-          0, // OSC1_WAVEFORM
-          192, // OSC1_VOL
-          104, // OSC1_SEMI
-          64, // OSC1_XENV
-          0, // OSC2_WAVEFORM
-          80, // OSC2_VOL
-          99, // OSC2_SEMI
-          0, // OSC2_DETUNE
-          0, // OSC2_XENV
-          0, // NOISE_VOL
-          4, // ENV_ATTACK
-          0, // ENV_SUSTAIN
-          66, // ENV_RELEASE
-          0, // ENV_EXP_DECAY
-          0, // ARP_CHORD
-          0, // ARP_SPEED
-          3, // LFO_WAVEFORM
-          0, // LFO_AMT
-          0, // LFO_FREQ
-          0, // LFO_FX_FREQ
-          1, // FX_FILTER
-          0, // FX_FREQ
-          1, // FX_RESONANCE
-          2, // FX_DIST
-          32, // FX_DRIVE
-          37, // FX_PAN_AMT
-          4, // FX_PAN_FREQ
-          0, // FX_DELAY_AMT
-          0, // FX_DELAY_TIME
-        ],
-        // Patterns
-        p: [1],
-        // Columns
-        c: [{ n: [135, 135], f: [] }],
-      },
-    ],
-    rowLen: 6615, // In sample lengths
-    patternLen: 16, // Rows per pattern
-    endPattern: 0, // End pattern
-    numChannels: 1, // Number of channels
-  };
-
   let player;
   if (DEBUG) {
     const t0 = new Date();
 
     player = new CPlayer();
-
-    player.init(song);
 
     while (player.generate() < 1);
 
@@ -476,8 +348,6 @@ export const loadAudio = (canvas, init) => {
     console.debug(`Audio instantiated in ${t1 - t0} ms`);
   } else {
     player = new CPlayer();
-
-    player.init(song);
 
     while (player.generate() < 1);
   }
@@ -492,11 +362,9 @@ export const loadAudio = (canvas, init) => {
   } else {
     canvas.onclick = init;
   }
-
-  return player;
 };
 
-export const startAudio = (player) => {
+export const startAudio = () => {
   if (!AUDIO) {
     const audioCtx = new AudioContext();
     const analyser = new AnalyserNode(audioCtx);
@@ -507,23 +375,27 @@ export const startAudio = (player) => {
     };
   }
 
-  // Put the generated song in an Audio element.
-  const wave = player.createWave();
-  const audio = document.createElement("audio");
-  audio.src = URL.createObjectURL(new Blob([wave], { type: "audio/wav" }));
-  audio.loop = true;
-
   const audioCtx = new AudioContext();
-  audio.onplay = () => audioCtx.resume();
+  const audio = audioCtx.createBufferSource();
 
-  // Create an analyser
-  const analyser = audioCtx.createAnalyser();
-  const source = audioCtx.createMediaElementSource(audio);
+  // Create a AudioBuffer from the generated audio data
+  const buffer = audioCtx.createBuffer(2, songNumWords / 2, 44100);
+  const channel0 = buffer.getChannelData(0);
+  const channel1 = buffer.getChannelData(1);
 
-  source.connect(analyser);
+  for (let i = 0; i < songNumWords / 2; i++) {
+    channel0[i] = songMixBuf[i * 2] / 65536;
+    channel1[i] = songMixBuf[i * 2 + 1] / 65536;
+  }
+
+  audio.buffer = buffer;
+
+  const analyser = new AnalyserNode(audioCtx);
   analyser.connect(audioCtx.destination);
+  audio.connect(analyser);
 
-  audio.play();
+  audio.loop = true;
+  audio.start();
 
   return { audioCtx, analyser };
 };
