@@ -80,30 +80,19 @@ let songMixBuf = new Int32Array(songNumWords);
 //--------------------------------------------------------------------------
 
 // Oscillators
-function osc_sin(value) {
-  return Math.sin(value * 6.283184);
-}
-
-function osc_saw(value) {
-  return 2 * (value % 1) - 1;
-}
-
-function osc_square(value) {
-  return value % 1 < 0.5 ? 1 : -1;
-}
-
-function osc_tri(value) {
-  var v2 = (value % 1) * 4;
+const osc_sin = (value) => Math.sin(value * 6.283184);
+const osc_saw = (value) => 2 * (value % 1) - 1;
+const osc_square = (value) => (value % 1 < 0.5 ? 1 : -1);
+const osc_tri = (value) => {
+  const v2 = (value % 1) * 4;
   if (v2 < 2) return v2 - 1;
   return 3 - v2;
-}
+};
 
-function getnotefreq(n) {
-  // 174.61.. / 44100 = 0.003959503758 (F3)
-  return 0.003959503758 * 2 ** ((n - 128) / 12);
-}
+// 174.61.. / 44100 = 0.003959503758 (F3)
+const getnotefreq = (n) => 0.003959503758 * 2 ** ((n - 128) / 12);
 
-function createNote(instr, n, rowLen) {
+const createNote = (instr, n, rowLen) => {
   var osc1 = mOscillators[instr.i[0]],
     o1vol = instr.i[1],
     o1xenv = instr.i[3] / 32,
@@ -169,7 +158,7 @@ function createNote(instr, n, rowLen) {
   }
 
   return noteBuf;
-}
+};
 
 //--------------------------------------------------------------------------
 // Private members
@@ -183,7 +172,7 @@ const mOscillators = [osc_sin, osc_square, osc_saw, osc_tri];
 //--------------------------------------------------------------------------
 
 // Generate audio data for a single track
-function generate() {
+const generate = () => {
   // Local variables
   var i, j, p, row, col, n, cp, k, t, rsample, rowStartSample, f;
 
@@ -318,7 +307,7 @@ function generate() {
   // Next iteration. Return progress (1.0 == done!).
   songGenerationCol++;
   return songGenerationCol / song.numChannels;
-}
+};
 
 // Loads the Soundbox synth module, and generates the music.
 // This has to be called and it has to be finished before "setupAudio" is called.
