@@ -188,10 +188,6 @@ async function main() {
 
   // Sobel Filter - Compute shader
 
-  const maskTextureContext = document.createElement("canvas").getContext("2d");
-  maskTextureContext.canvas.width = canvas.width;
-  maskTextureContext.canvas.height = canvas.height;
-
   const sobelShaderCode = DEBUG
     ? await fetch("src/shader/sobel.wgsl").then((res) => res.text())
     : MINIFIED_SOBEL_SHADER;
@@ -205,11 +201,14 @@ async function main() {
     },
   });
 
+  const maskTextureContext = document.createElement("canvas").getContext("2d");
+  const asciiTextureContext = document.createElement("canvas").getContext("2d");
+
+  maskTextureContext.canvas.width = canvas.width;
+  maskTextureContext.canvas.height = canvas.height;
+
   // Inlined ascii texture creation
   const characters = " .:coePO0■|/-\\";
-
-  const asciiTextureSource = document.createElement("canvas");
-  const asciiTextureContext = asciiTextureSource.getContext("2d");
 
   const width = 8 * characters.length;
   const height = 8;
@@ -218,8 +217,8 @@ async function main() {
   asciiTextureContext.fillRect(
     0,
     0,
-    (asciiTextureSource.width = width),
-    (asciiTextureSource.height = height)
+    (asciiTextureContext.canvas.width = width),
+    (asciiTextureContext.canvas.height = height)
   );
   asciiTextureContext.fillStyle = "#fff";
   asciiTextureContext.font = "8px monospace";
@@ -240,7 +239,7 @@ async function main() {
   // copySourceToTexture(device, asciiTexture, asciiTextureSource);
 
   device.queue.copyExternalImageToTexture(
-    { source: asciiTextureSource },
+    { source: asciiTextureContext.canvas },
     { texture: asciiTexture },
     { width: width, height: height }
   );
@@ -295,7 +294,7 @@ async function main() {
     state.now = now;
 
     // updateMaskTexture(device, maskTexture, maskTextureContext);
-    const { width, height } = maskTextureContext.canvas;
+    // const { width, height } = maskTextureContext.canvas;
 
     // maskTextureContext.fillStyle = "#000";
     // maskTextureContext.fillRect(0, 0, width, height);
@@ -305,8 +304,8 @@ async function main() {
     maskTextureContext.fillRect(
       margin,
       margin,
-      width - margin * 2,
-      height - margin * 2
+      canvas.width - margin * 2,
+      canvas.height - margin * 2
     );
 
     maskTextureContext.font = "160px s";
