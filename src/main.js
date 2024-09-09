@@ -132,12 +132,19 @@ async function main() {
       GPUTextureUsage.RENDER_ATTACHMENT,
   });
 
-  // Raymarch
+  // Buffers
 
   const raymarchUniformsBuffer = device.createBuffer({
     size: 3 * 4 * 4,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
+
+  const asciiUniformsBuffer = device.createBuffer({
+    size: 4 * 4,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
+  // Raymarch
 
   const raymarchShaderCode = DEBUG
     ? await fetch("src/shader/raymarch.wgsl").then((res) => res.text())
@@ -149,10 +156,16 @@ async function main() {
     "raymarch"
   );
 
-  const raymarchPassBindGroup = createBindGroup(
-    raymarchPassPipeline,
-    [{ buffer: raymarchUniformsBuffer }],
-    "uniforms bind group"
+  // Ascii filter
+
+  const asciiShaderCode = DEBUG
+    ? await fetch("src/shader/ascii.wgsl").then((res) => res.text())
+    : MINIFIED_ASCII_SHADER;
+
+  const asciiRenderPipeline = createRenderPipeline(
+    asciiShaderCode,
+    presentationFormat,
+    "ascii"
   );
 
   // Sobel Filter - Compute shader
@@ -168,31 +181,6 @@ async function main() {
   const sobelComputePipeline = createComputePipeline(
     sobelShaderCode,
     "sobel filter compute"
-  );
-
-  const sobelComputeBindGroup = createBindGroup(
-    sobelComputePipeline,
-    [
-      raymarchPassTexture.createView(),
-      sobelTexture.createView(),
-      maskTexture.createView(),
-    ],
-    "sobel filter compute bind group"
-  );
-
-  const asciiUniformsBuffer = device.createBuffer({
-    size: 4 * 4,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-
-  const asciiShaderCode = DEBUG
-    ? await fetch("src/shader/ascii.wgsl").then((res) => res.text())
-    : MINIFIED_ASCII_SHADER;
-
-  const asciiRenderPipeline = createRenderPipeline(
-    asciiShaderCode,
-    presentationFormat,
-    "ascii"
   );
 
   // Inlined ascii texture creation
@@ -228,6 +216,24 @@ async function main() {
   }
 
   copySourceToTexture(device, asciiTexture, asciiTextureSource);
+
+  // Bind groups
+
+  const raymarchPassBindGroup = createBindGroup(
+    raymarchPassPipeline,
+    [{ buffer: raymarchUniformsBuffer }],
+    "uniforms bind group"
+  );
+
+  const sobelComputeBindGroup = createBindGroup(
+    sobelComputePipeline,
+    [
+      raymarchPassTexture.createView(),
+      sobelTexture.createView(),
+      maskTexture.createView(),
+    ],
+    "sobel filter compute bind group"
+  );
 
   const asciiBindGroup = createBindGroup(
     asciiRenderPipeline,
