@@ -150,11 +150,22 @@ async function main() {
     ? await fetch("src/shader/raymarch.wgsl").then((res) => res.text())
     : MINIFIED_RAYMARCH_SHADER;
 
-  const raymarchPassPipeline = createRenderPipeline(
-    raymarchShaderCode,
-    format,
-    "raymarch"
-  );
+  const vertexShaderModule = device.createShaderModule({
+    code: vertexShaderCode,
+  });
+
+  const raymarchPassPipeline = device.createRenderPipeline({
+    layout: "auto",
+    vertex: {
+      module: vertexShaderModule,
+    },
+    fragment: {
+      module: device.createShaderModule({
+        code: raymarchShaderCode,
+      }),
+      targets: [{ format }],
+    },
+  });
 
   // Ascii filter
 
@@ -162,11 +173,18 @@ async function main() {
     ? await fetch("src/shader/ascii.wgsl").then((res) => res.text())
     : MINIFIED_ASCII_SHADER;
 
-  const asciiRenderPipeline = createRenderPipeline(
-    asciiShaderCode,
-    presentationFormat,
-    "ascii"
-  );
+  const asciiRenderPipeline = device.createRenderPipeline({
+    layout: "auto",
+    vertex: {
+      module: vertexShaderModule,
+    },
+    fragment: {
+      module: device.createShaderModule({
+        code: asciiShaderCode,
+      }),
+      targets: [{ format: presentationFormat }],
+    },
+  });
 
   // Sobel Filter - Compute shader
 
@@ -178,10 +196,14 @@ async function main() {
     ? await fetch("src/shader/sobel.wgsl").then((res) => res.text())
     : MINIFIED_SOBEL_SHADER;
 
-  const sobelComputePipeline = createComputePipeline(
-    sobelShaderCode,
-    "sobel filter compute"
-  );
+  const sobelComputePipeline = device.createComputePipeline({
+    layout: "auto",
+    compute: {
+      module: device.createShaderModule({
+        code: sobelShaderCode,
+      }),
+    },
+  });
 
   // Inlined ascii texture creation
   const characters = " .:coePO0■|/-\\";
@@ -215,7 +237,13 @@ async function main() {
     asciiTextureContext.fillText(characters[i], x, height / 2 + 3);
   }
 
-  copySourceToTexture(device, asciiTexture, asciiTextureSource);
+  // copySourceToTexture(device, asciiTexture, asciiTextureSource);
+
+  device.queue.copyExternalImageToTexture(
+    { source: asciiTextureSource },
+    { texture: asciiTexture },
+    { width: width, height: height }
+  );
 
   // Bind groups
 
@@ -266,9 +294,85 @@ async function main() {
 
     state.now = now;
 
-    updateMaskTexture(device, maskTexture, maskTextureContext);
-    updateFFT();
-    updateUniforms();
+    // updateMaskTexture(device, maskTexture, maskTextureContext);
+    const { width, height } = maskTextureContext.canvas;
+
+    // maskTextureContext.fillStyle = "#000";
+    // maskTextureContext.fillRect(0, 0, width, height);
+
+    maskTextureContext.fillStyle = "#fff";
+    const margin = 30;
+    maskTextureContext.fillRect(
+      margin,
+      margin,
+      width - margin * 2,
+      height - margin * 2
+    );
+
+    maskTextureContext.font = "160px s";
+    // maskTextureContext.fillStyle = "#0F0";
+    maskTextureContext.fillStyle = "#000";
+
+    const message = [
+      "LOREM",
+      "IPSUM",
+      "DOLOR",
+      "SIT",
+      "AMET,",
+      "CONSECTETUR",
+      "ADIPISCING",
+      "ELIT",
+    ].join("                                ");
+
+    maskTextureContext.fillText(
+      message,
+      5000 - ((state.now / 2) % 20000),
+      height - margin * 2 - 40
+    );
+
+    device.queue.copyExternalImageToTexture(
+      { source: maskTextureContext.canvas },
+      { texture: maskTexture },
+      { width: canvas.width, height: canvas.height }
+    );
+
+    // updateFFT();
+    analyser.getByteFrequencyData(fftDataArray);
+    if (DEBUG) {
+      state.audio.beat = fftDataArray[state.audio.offset];
+    }
+    state.ascii.background = fftDataArray[state.audio.offset] / 255;
+
+    // updateUniforms();
+    device.queue.writeBuffer(
+      raymarchUniformsBuffer,
+      0,
+      new Float32Array([
+        state.camera.position.x,
+        state.camera.position.y,
+        state.camera.position.z,
+        0,
+
+        state.camera.target.x,
+        state.camera.target.y,
+        state.camera.target.z,
+        0,
+
+        canvas.width,
+        canvas.height,
+        state.now,
+        state.audio.beat / 255,
+      ])
+    );
+    device.queue.writeBuffer(
+      asciiUniformsBuffer,
+      0,
+      new Float32Array([
+        state.ascii.background,
+        state.ascii.fill,
+        state.ascii.edges,
+      ])
+    );
 
     const commandEncoder = device.createCommandEncoder();
 
@@ -376,46 +480,6 @@ async function main() {
     }
   }
 
-  function updateFFT() {
-    analyser.getByteFrequencyData(fftDataArray);
-    state.audio.beat = fftDataArray[state.audio.offset];
-    state.ascii.background = state.audio.beat / 255;
-    // state.ascii.fill = (2 * state.audio.beat) / 255;
-    // state.ascii.edges = state.audio.beat / 255;
-  }
-
-  function updateUniforms() {
-    device.queue.writeBuffer(
-      raymarchUniformsBuffer,
-      0,
-      new Float32Array([
-        state.camera.position.x,
-        state.camera.position.y,
-        state.camera.position.z,
-        0,
-
-        state.camera.target.x,
-        state.camera.target.y,
-        state.camera.target.z,
-        0,
-
-        canvas.width,
-        canvas.height,
-        state.now,
-        state.audio.beat / 255,
-      ])
-    );
-    device.queue.writeBuffer(
-      asciiUniformsBuffer,
-      0,
-      new Float32Array([
-        state.ascii.background,
-        state.ascii.fill,
-        state.ascii.edges,
-      ])
-    );
-  }
-
   function setupKeyboardListener(audioCtx) {
     document.addEventListener(
       "keydown",
@@ -484,131 +548,6 @@ async function main() {
     );
   }
 
-  function createRenderPipeline(shaderCode, format, label) {
-    const vertexShaderModule = device.createShaderModule(
-      DEBUG
-        ? {
-            label: `${label} vertex shader`,
-            code: vertexShaderCode,
-          }
-        : {
-            code: vertexShaderCode,
-          }
-    );
-
-    const shaderModule = device.createShaderModule(
-      DEBUG
-        ? {
-            label: `${label} shader`,
-            code: shaderCode,
-          }
-        : {
-            code: shaderCode,
-          }
-    );
-
-    const pipeline = device.createRenderPipeline(
-      DEBUG
-        ? {
-            label: `${label} render pipeline`,
-            layout: "auto",
-            vertex: {
-              module: vertexShaderModule,
-            },
-            fragment: {
-              module: shaderModule,
-              targets: [{ format }],
-            },
-          }
-        : {
-            layout: "auto",
-            vertex: {
-              module: vertexShaderModule,
-            },
-            fragment: {
-              module: shaderModule,
-              targets: [{ format }],
-            },
-          }
-    );
-
-    return pipeline;
-  }
-
-  function createComputePipeline(shaderCode, label) {
-    const shaderModule = device.createShaderModule(
-      DEBUG
-        ? {
-            label: `${label} shader`,
-            code: shaderCode,
-          }
-        : {
-            code: shaderCode,
-          }
-    );
-
-    const pipeline = device.createComputePipeline(
-      DEBUG
-        ? {
-            label: `${label} render pipeline`,
-            layout: "auto",
-            compute: {
-              module: shaderModule,
-            },
-          }
-        : {
-            layout: "auto",
-            compute: {
-              module: shaderModule,
-            },
-          }
-    );
-
-    return pipeline;
-  }
-
-  function updateMaskTexture(device, maskTexture, ctx) {
-    const { width, height } = ctx.canvas;
-
-    // ctx.fillStyle = "#000";
-    // ctx.fillRect(0, 0, width, height);
-
-    ctx.fillStyle = "#fff";
-    const margin = 30;
-    ctx.fillRect(margin, margin, width - margin * 2, height - margin * 2);
-
-    ctx.font = "160px s";
-    // ctx.fillStyle = "#0F0";
-    ctx.fillStyle = "#000";
-
-    const message = [
-      "LOREM",
-      "IPSUM",
-      "DOLOR",
-      "SIT",
-      "AMET,",
-      "CONSECTETUR",
-      "ADIPISCING",
-      "ELIT",
-    ].join("                                ");
-
-    ctx.fillText(
-      message,
-      5000 - ((state.now / 2) % 20000),
-      height - margin * 2 - 40
-    );
-
-    copySourceToTexture(device, maskTexture, ctx.canvas);
-  }
-
-  function copySourceToTexture(device, texture, source, flipY = false) {
-    device.queue.copyExternalImageToTexture(
-      { source, flipY },
-      { texture },
-      { width: source.width, height: source.height }
-    );
-  }
-
   function dispatchRenderPass(
     commandEncoder,
     pipeline,
@@ -653,12 +592,6 @@ async function main() {
       Math.ceil(size.height / 8)
     );
     passEncoder.end();
-  }
-
-  async function loadImageBitmap(url) {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    return await createImageBitmap(blob, { colorSpaceConversion: "none" });
   }
 }
 
