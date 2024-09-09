@@ -4,10 +4,10 @@ struct Uniforms {
     edges: f32,
 };
 
-@group(0) @binding(0) var frameTexture: texture_2d<f32>;
-@group(0) @binding(1) var maskTexture: texture_2d<f32>;
-@group(0) @binding(2) var asciiTexture: texture_2d<f32>;
-@group(0) @binding(3) var sobelTexture: texture_2d<f32>;
+@group(0) @binding(0) var raymarchTexture: texture_2d<f32>;
+@group(0) @binding(1) var sobelTexture: texture_2d<f32>;
+@group(0) @binding(2) var maskTexture: texture_2d<f32>;
+@group(0) @binding(3) var asciiTexture: texture_2d<f32>;
 @group(0) @binding(4) var<uniform> uniforms: Uniforms;
 
 fn colorBurn(base: f32, blend: f32) -> f32 {
@@ -21,12 +21,12 @@ fn colorBurn(base: f32, blend: f32) -> f32 {
 @fragment
 fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
     let downscale = vec2i(FragCoord.xy / 8) * 8;
-    let color = textureLoad(frameTexture, downscale, 0);
+    let color = textureLoad(raymarchTexture, downscale, 0);
 
     // let maskPixel = textureLoad(maskTexture, downscale, 0);
     if textureLoad(maskTexture, downscale, 0).x < 0.7 {
-        // return vec4f(1.0) - textureLoad(frameTexture, vec2i(FragCoord.xy), 0);
-        // return textureLoad(frameTexture, vec2i(FragCoord.xy), 0);
+        // return vec4f(1.0) - textureLoad(raymarchTexture, vec2i(FragCoord.xy), 0);
+        // return textureLoad(raymarchTexture, vec2i(FragCoord.xy), 0);
         return color;
     }
 

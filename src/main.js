@@ -1,9 +1,13 @@
 import debug from "./debug.js";
 import fps from "./fps.js";
 
-const canvas = createMainCanvas();
-
 const DEBUG = true;
+
+var canvas = document.createElement("canvas");
+canvas.style.position = "fixed";
+canvas.style.left = canvas.style.top = 0;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
 // import { loadAudio, startAudio } from "./sointu.js";
 import { loadAudio, startAudio } from "./soundbox.js";
@@ -201,6 +205,33 @@ async function main() {
     },
   });
 
+  // Bind groups
+
+  const raymarchPassBindGroup = device.createBindGroup({
+    layout: raymarchPassPipeline.getBindGroupLayout(0),
+    entries: [{ binding: 0, resource: { buffer: raymarchUniformsBuffer } }],
+  });
+
+  const sobelComputeBindGroup = device.createBindGroup({
+    layout: sobelComputePipeline.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: raymarchPassTexture.createView() },
+      { binding: 1, resource: sobelTexture.createView() },
+      { binding: 2, resource: maskTexture.createView() },
+    ],
+  });
+
+  const asciiBindGroup = device.createBindGroup({
+    layout: asciiRenderPipeline.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: raymarchPassTexture.createView() },
+      { binding: 1, resource: sobelTexture.createView() },
+      { binding: 2, resource: maskTexture.createView() },
+      { binding: 3, resource: asciiTexture.createView() },
+      { binding: 4, resource: { buffer: asciiUniformsBuffer } },
+    ],
+  });
+
   const maskTextureContext = document.createElement("canvas").getContext("2d");
   const asciiTextureContext = document.createElement("canvas").getContext("2d");
 
@@ -224,10 +255,6 @@ async function main() {
   asciiTextureContext.font = "8px monospace";
   asciiTextureContext.textAlign = "center";
 
-  // asciiTextureContext.textBaseline = "middle";
-  // asciiTextureSource.style["image-rendering"] = "pixelated";
-  // asciiTextureContext.imageSmoothingEnabled = false;
-
   const charWidth = width / characters.length;
   const halfCharWidth = charWidth / 2;
 
@@ -236,42 +263,10 @@ async function main() {
     asciiTextureContext.fillText(characters[i], x, height / 2 + 3);
   }
 
-  // copySourceToTexture(device, asciiTexture, asciiTextureSource);
-
   device.queue.copyExternalImageToTexture(
     { source: asciiTextureContext.canvas },
     { texture: asciiTexture },
     { width: width, height: height }
-  );
-
-  // Bind groups
-
-  const raymarchPassBindGroup = createBindGroup(
-    raymarchPassPipeline,
-    [{ buffer: raymarchUniformsBuffer }],
-    "uniforms bind group"
-  );
-
-  const sobelComputeBindGroup = createBindGroup(
-    sobelComputePipeline,
-    [
-      raymarchPassTexture.createView(),
-      sobelTexture.createView(),
-      maskTexture.createView(),
-    ],
-    "sobel filter compute bind group"
-  );
-
-  const asciiBindGroup = createBindGroup(
-    asciiRenderPipeline,
-    [
-      raymarchPassTexture.createView(),
-      maskTexture.createView(),
-      asciiTexture.createView(),
-      sobelTexture.createView(),
-      { buffer: asciiUniformsBuffer },
-    ],
-    "ascii effect bind group"
   );
 
   // Start the render loop
@@ -373,55 +368,48 @@ async function main() {
       ])
     );
 
-    const commandEncoder = device.createCommandEncoder();
+    var commandEncoder = device.createCommandEncoder();
 
-    dispatchRenderPass(
-      commandEncoder,
-      raymarchPassPipeline,
-      raymarchPassBindGroup,
-      raymarchPassTexture,
-      "raymarch pass"
-    );
+    const raymarchRenderPassEncoder = commandEncoder.beginRenderPass({
+      colorAttachments: [
+        {
+          view: raymarchPassTexture.createView(),
+          loadOp: "clear",
+          storeOp: "store",
+        },
+      ],
+    });
+    raymarchRenderPassEncoder.setPipeline(raymarchPassPipeline);
+    raymarchRenderPassEncoder.setBindGroup(0, raymarchPassBindGroup);
+    raymarchRenderPassEncoder.draw(6, 1, 0, 0);
+    raymarchRenderPassEncoder.end();
 
-    dispatchComputeShader(
-      commandEncoder,
-      sobelComputePipeline,
-      sobelComputeBindGroup,
-      canvas
+    const computePassEncoder = commandEncoder.beginComputePass();
+    computePassEncoder.setPipeline(sobelComputePipeline);
+    computePassEncoder.setBindGroup(0, sobelComputeBindGroup);
+    computePassEncoder.dispatchWorkgroups(
+      Math.ceil(canvas.width / 8),
+      Math.ceil(canvas.height / 8)
     );
+    computePassEncoder.end();
 
-    dispatchRenderPass(
-      commandEncoder,
-      asciiRenderPipeline,
-      asciiBindGroup,
-      context.getCurrentTexture(),
-      "ascii filter pass"
-    );
+    const asciiRenderPassEncoder = commandEncoder.beginRenderPass({
+      colorAttachments: [
+        {
+          view: context.getCurrentTexture().createView(),
+          loadOp: "clear",
+          storeOp: "store",
+        },
+      ],
+    });
+    asciiRenderPassEncoder.setPipeline(asciiRenderPipeline);
+    asciiRenderPassEncoder.setBindGroup(0, asciiBindGroup);
+    asciiRenderPassEncoder.draw(6, 1, 0, 0);
+    asciiRenderPassEncoder.end();
 
     device.queue.submit([commandEncoder.finish()]);
 
     window.requestAnimationFrame(render);
-  }
-
-  function createBindGroup(pipeline, resources, label) {
-    if (DEBUG) {
-      return device.createBindGroup({
-        label,
-        layout: pipeline.getBindGroupLayout(0),
-        entries: resources.map((resource, index) => ({
-          binding: index,
-          resource,
-        })),
-      });
-    }
-
-    return device.createBindGroup({
-      layout: pipeline.getBindGroupLayout(0),
-      entries: resources.map((resource, index) => ({
-        binding: index,
-        resource,
-      })),
-    });
   }
 
   function updateCamera(dt) {
@@ -546,59 +534,4 @@ async function main() {
       true
     );
   }
-
-  function dispatchRenderPass(
-    commandEncoder,
-    pipeline,
-    bindGroup,
-    texture,
-    label
-  ) {
-    const passEncoder = commandEncoder.beginRenderPass(
-      DEBUG
-        ? {
-            label,
-            colorAttachments: [
-              {
-                view: texture.createView(),
-                loadOp: "clear",
-                storeOp: "store",
-              },
-            ],
-          }
-        : {
-            colorAttachments: [
-              {
-                view: texture.createView(),
-                loadOp: "clear",
-                storeOp: "store",
-              },
-            ],
-          }
-    );
-    passEncoder.setPipeline(pipeline);
-    passEncoder.setBindGroup(0, bindGroup);
-    passEncoder.draw(6, 1, 0, 0);
-    passEncoder.end();
-  }
-
-  function dispatchComputeShader(commandEncoder, pipeline, bindGroup, size) {
-    const passEncoder = commandEncoder.beginComputePass();
-    passEncoder.setPipeline(pipeline);
-    passEncoder.setBindGroup(0, bindGroup);
-    passEncoder.dispatchWorkgroups(
-      Math.ceil(size.width / 8),
-      Math.ceil(size.height / 8)
-    );
-    passEncoder.end();
-  }
-}
-
-function createMainCanvas() {
-  const canvas = document.createElement("canvas");
-  canvas.style.position = "fixed";
-  canvas.style.left = canvas.style.top = 0;
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  return canvas;
 }

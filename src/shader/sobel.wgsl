@@ -1,5 +1,5 @@
-@group(0) @binding(0) var frameTexture: texture_2d<f32>;
-@group(0) @binding(1) var outputTexture: texture_storage_2d<rgba8unorm, write>;
+@group(0) @binding(0) var raymarchTexture: texture_2d<f32>;
+@group(0) @binding(1) var sobelTexture: texture_storage_2d<rgba8unorm, write>;
 @group(0) @binding(2) var maskTexture: texture_2d<f32>;
 
 var<workgroup> sharedDirectionCounts: array<atomic<u32>, 8>;
@@ -32,7 +32,7 @@ fn f(@builtin(global_invocation_id) global_id: vec3u) {
             // let maskPixel = textureLoad(maskTexture, texCoord, 0);
 
             if textureLoad(maskTexture, texCoord, 0).x > 0.7 {
-                let texel = textureLoad(frameTexture, texCoord, 0);
+                let texel = textureLoad(raymarchTexture, texCoord, 0);
                 xy += vec2(texel.x * kernel[dy + 1][dx + 1], texel.x * kernel[dx + 1][dy + 1]);
             }
 
@@ -65,7 +65,7 @@ fn f(@builtin(global_invocation_id) global_id: vec3u) {
         }
     }
 
-    textureStore(outputTexture, pos, vec4(
+    textureStore(sobelTexture, pos, vec4(
         mostCommonDirection,
         f32(maxCount),
         0.0,
