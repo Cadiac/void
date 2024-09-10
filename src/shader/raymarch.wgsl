@@ -22,23 +22,23 @@ struct Uniforms {
 // }
 
 // http://en.wikipedia.org/wiki/Rotation_matrix#Basic_rotations
-// fn rotateX(theta: f32) -> mat3x3<f32> {
-//     let s = sin(theta);
-//     let c = cos(theta);
-//     return mat3x3(vec3(1, 0, 0), vec3(0, c, -s), vec3(0, s, c));
-// }
+fn rotateX(theta: f32) -> mat3x3<f32> {
+    let s = sin(theta);
+    let c = cos(theta);
+    return mat3x3(vec3(1, 0, 0), vec3(0, c, -s), vec3(0, s, c));
+}
 
-// fn rotateY(theta: f32) -> mat3x3<f32> {
-//     let s = sin(theta);
-//     let c = cos(theta);
-//     return mat3x3(vec3(c, 0, s), vec3(0, 1, 0), vec3(-s, 0, c));
-// }
+fn rotateY(theta: f32) -> mat3x3<f32> {
+    let s = sin(theta);
+    let c = cos(theta);
+    return mat3x3(vec3(c, 0, s), vec3(0, 1, 0), vec3(-s, 0, c));
+}
 
-// fn rotateZ(theta: f32) -> mat3x3<f32> {
-//     let s = sin(theta);
-//     let c = cos(theta);
-//     return mat3x3(vec3(c, -s, 0), vec3(s, c, 0), vec3(0, 0, 1));
-// }
+fn rotateZ(theta: f32) -> mat3x3<f32> {
+    let s = sin(theta);
+    let c = cos(theta);
+    return mat3x3(vec3(c, -s, 0), vec3(s, c, 0), vec3(0, 0, 1));
+}
 
 fn sphere(pos: vec3f, radius: f32) -> f32 {
     return length(pos) - radius;
@@ -70,7 +70,6 @@ fn opRepeat(p: vec3f, s: vec3f) -> vec3f {
 }
 
 fn scene(pos: vec3f) -> f32 {
-    let q = opRepeat(pos, vec3f(4.5 + sin(uniforms.time * 0.0001)));
     // let qq = opRepeat(pos - vec3f(5.0), vec3f(10.0));
 
     // let dist = cube(
@@ -79,12 +78,12 @@ fn scene(pos: vec3f) -> f32 {
 
     // let dist = min(sphere(pos, 10.0), cube(pos - vec3f(0.0, 20.0, 0.0), vec3(5.0)));
 
-    let dist = opSubtraction(
-        sphere(q, 3.0),
+    // return dist;
+
+    return opSubtraction(
+        sphere(opRepeat(pos, vec3f(4.5 + sin(uniforms.time * 0.0001))), 3.0),
         cube(pos, vec3(20.0))
     );
-
-    return dist;
 }
 
 fn rayMarch(pos: vec3f, rayDir: vec3f) -> f32 {

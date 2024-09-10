@@ -304,7 +304,6 @@ async function main() {
     );
 
     maskTextureContext.font = "160px s";
-    // maskTextureContext.fillStyle = "#0F0";
     maskTextureContext.fillStyle = "#000";
 
     const message = [
@@ -321,7 +320,7 @@ async function main() {
     maskTextureContext.fillText(
       message,
       5000 - ((state.now / 2) % 20000),
-      height - margin * 2 - 40
+      canvas.height / 2
     );
 
     device.queue.copyExternalImageToTexture(

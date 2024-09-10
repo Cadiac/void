@@ -35,7 +35,7 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
 
     var base = uniforms.background * color;
     if sobel.y > 0 { // isEdge
-        let direction = i32(round(sobel.x * 8.0));
+        // let direction = i32(round(sobel.x * 8.0));
 
         // 0   |
         // 8   /
@@ -51,7 +51,7 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
 
         base += textureLoad(
             asciiTexture,
-            vec2((direction % 4) * 8 + 80 + i32(FragCoord.x % 8),
+            vec2((i32(round(sobel.x * 8.0)) % 4) * 8 + 80 + i32(FragCoord.x % 8),
                 i32(FragCoord.y % 8)),
             0
         ) * color * uniforms.edges;
@@ -60,11 +60,12 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
         // let quantized = floor(luminance * 10) / 10;
         // let offset = i32(min(quantized, 0.9) * 80);
         // let asciiPixel = textureLoad(asciiTexture, vec2i(FragCoord.xy % 8) + vec2i(offset, 0), 0);
-        base += textureLoad(
-            asciiTexture,
+
+        // base += asciiPixel * color * uniforms.fill;
+
+        base += textureLoad(asciiTexture,
             vec2i(FragCoord.xy % 8) +
-            vec2i(i32(min(floor(0.2 * color.r + 0.7 * color.g + 0.1 * color.b * 10) / 10, 0.9) * 80), 0),
-            0
+            vec2i(i32(min(floor((0.2 * color.r + 0.7 * color.g + 0.1 * color.b) * 10) / 10, 0.9) * 80), 0), 0
         ) * color * uniforms.fill;
     }
 

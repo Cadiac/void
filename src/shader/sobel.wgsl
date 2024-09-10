@@ -6,7 +6,7 @@ var<workgroup> sharedDirectionCounts: array<atomic<u32>, 8>;
 
 @compute @workgroup_size(8, 8)
 fn f(@builtin(global_invocation_id) global_id: vec3u) {
-    var xy = vec2f(0);
+    var sobel = vec2f(0);
     // var y = 0.0;
     let pos = vec2i(global_id.xy);
 
@@ -32,8 +32,8 @@ fn f(@builtin(global_invocation_id) global_id: vec3u) {
             // let maskPixel = textureLoad(maskTexture, texCoord, 0);
 
             if textureLoad(maskTexture, texCoord, 0).x > 0.7 {
-                let texel = textureLoad(raymarchTexture, texCoord, 0);
-                xy += vec2(texel.x * kernel[dy + 1][dx + 1], texel.x * kernel[dx + 1][dy + 1]);
+                let red = textureLoad(raymarchTexture, texCoord, 0).x;
+                sobel += vec2(red * kernel[dy + 1][dx + 1], red * kernel[dx + 1][dy + 1]);
             }
 
             // y += texel.r * kernel[dx + 1][dy + 1];
@@ -45,9 +45,9 @@ fn f(@builtin(global_invocation_id) global_id: vec3u) {
     // let normalized = (angle + 3.1416) / (2.0 * 3.1416);
     // let normalized = (atan2(y, x) + 3) / 6;
 
-    if length(xy) >= 0.2 {
+    if length(sobel) >= 0.2 {
         // let direction = u32(((((atan2(y, x) + 3) / 6) + 1.0 / 16.0) % 1.0) * 8.0);
-        atomicAdd(&sharedDirectionCounts[u32(((((atan2(xy.y, xy.x) + 3) / 6) + 1.0 / 16.0) % 1.0) * 8.0)], 1);
+        atomicAdd(&sharedDirectionCounts[u32(((((atan2(sobel.y, sobel.x) + 3) / 6) + 1.0 / 16.0) % 1.0) * 8.0)], 1);
     }
 
     workgroupBarrier();

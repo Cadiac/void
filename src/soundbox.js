@@ -2,52 +2,142 @@ const DEBUG = true;
 const TOUCH = false;
 const AUDIO = true;
 
-const song = {
+// https://sb.bitsnbites.eu/?data=U0JveA4C7dexDYNADIXhx-lyKZBIRriGDVIGCdFRpGSCrJAB0h1jMBMLEV8EEgtQ8X_Sk2XZcu9XlErdnZbPYFFd-dC_9efGm2zchcK4VUo6VL6fdhUAAAAATmv6tha1s78-BuufvnCLFJtLDNtOftjWN2oXAAAAAMARfg
+// const song = {
+//   songData: [
+//     {
+//       // Instrument 0
+//       i: [
+//         0, // OSC1_WAVEFORM
+//         192, // OSC1_VOL
+//         104, // OSC1_SEMI
+//         64, // OSC1_XENV
+//         0, // OSC2_WAVEFORM
+//         80, // OSC2_VOL
+//         99, // OSC2_SEMI
+//         0, // OSC2_DETUNE
+//         0, // OSC2_XENV
+//         0, // NOISE_VOL
+//         4, // ENV_ATTACK
+//         0, // ENV_SUSTAIN
+//         66, // ENV_RELEASE
+//         0, // ENV_EXP_DECAY
+//         0, // ARP_CHORD
+//         0, // ARP_SPEED
+//         3, // LFO_WAVEFORM
+//         0, // LFO_AMT
+//         0, // LFO_FREQ
+//         0, // LFO_FX_FREQ
+//         1, // FX_FILTER
+//         0, // FX_FREQ
+//         1, // FX_RESONANCE
+//         2, // FX_DIST
+//         32, // FX_DRIVE
+//         37, // FX_PAN_AMT
+//         4, // FX_PAN_FREQ
+//         0, // FX_DELAY_AMT
+//         0, // FX_DELAY_TIME
+//       ],
+//       // Patterns
+//       p: [1],
+//       // Columns
+//       c: [{ n: [135, 135], f: [] }],
+//     },
+//   ],
+//   rowLen: 6615, // In sample lengths
+//   patternLen: 16, // Rows per pattern
+//   endPattern: 0, // End pattern
+//   numChannels: 1, // Number of channels
+// };
+
+var song = {
   songData: [
     {
       // Instrument 0
       i: [
         0, // OSC1_WAVEFORM
-        192, // OSC1_VOL
-        104, // OSC1_SEMI
-        64, // OSC1_XENV
+        255, // OSC1_VOL
+        116, // OSC1_SEMI
+        85, // OSC1_XENV
         0, // OSC2_WAVEFORM
-        80, // OSC2_VOL
-        99, // OSC2_SEMI
+        255, // OSC2_VOL
+        116, // OSC2_SEMI
         0, // OSC2_DETUNE
-        0, // OSC2_XENV
-        0, // NOISE_VOL
+        37, // OSC2_XENV
+        14, // NOISE_VOL
         4, // ENV_ATTACK
-        0, // ENV_SUSTAIN
-        66, // ENV_RELEASE
-        0, // ENV_EXP_DECAY
+        6, // ENV_SUSTAIN
+        73, // ENV_RELEASE
+        99, // ENV_EXP_DECAY
         0, // ARP_CHORD
         0, // ARP_SPEED
-        3, // LFO_WAVEFORM
+        0, // LFO_WAVEFORM
         0, // LFO_AMT
         0, // LFO_FREQ
         0, // LFO_FX_FREQ
-        1, // FX_FILTER
-        0, // FX_FREQ
-        1, // FX_RESONANCE
-        2, // FX_DIST
+        2, // FX_FILTER
+        136, // FX_FREQ
+        15, // FX_RESONANCE
+        0, // FX_DIST
         32, // FX_DRIVE
-        37, // FX_PAN_AMT
-        4, // FX_PAN_FREQ
-        0, // FX_DELAY_AMT
-        0, // FX_DELAY_TIME
+        0, // FX_PAN_AMT
+        0, // FX_PAN_FREQ
+        66, // FX_DELAY_AMT
+        6, // FX_DELAY_TIME
       ],
       // Patterns
-      p: [1],
+      p: [1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2],
       // Columns
-      c: [{ n: [135, 135], f: [] }],
+      c: [
+        { n: [135, 135], f: [] },
+        { n: [135, 135, , , 135, , , , 135, 135, , , 135], f: [] },
+      ],
+    },
+    {
+      // Instrument 1
+      i: [
+        0, // OSC1_WAVEFORM
+        160, // OSC1_VOL
+        128, // OSC1_SEMI
+        64, // OSC1_XENV
+        0, // OSC2_WAVEFORM
+        160, // OSC2_VOL
+        128, // OSC2_SEMI
+        0, // OSC2_DETUNE
+        64, // OSC2_XENV
+        210, // NOISE_VOL
+        4, // ENV_ATTACK
+        7, // ENV_SUSTAIN
+        52, // ENV_RELEASE
+        85, // ENV_EXP_DECAY
+        0, // ARP_CHORD
+        0, // ARP_SPEED
+        0, // LFO_WAVEFORM
+        60, // LFO_AMT
+        4, // LFO_FREQ
+        1, // LFO_FX_FREQ
+        2, // FX_FILTER
+        255, // FX_FREQ
+        0, // FX_RESONANCE
+        0, // FX_DIST
+        32, // FX_DRIVE
+        61, // FX_PAN_AMT
+        5, // FX_PAN_FREQ
+        32, // FX_DELAY_AMT
+        6, // FX_DELAY_TIME
+      ],
+      // Patterns
+      p: [, , , , , , , , 1, 1, 1, 1],
+      // Columns
+      c: [{ n: [, , 135, , , , 135, , , , 135, , , , 135], f: [] }],
     },
   ],
-  rowLen: 6615, // In sample lengths
+  rowLen: 8269, // In sample lengths
   patternLen: 16, // Rows per pattern
-  endPattern: 0, // End pattern
-  numChannels: 1, // Number of channels
+  endPattern: 11, // End pattern
+  numChannels: 2, // Number of channels
 };
+
 var songGenerationCol = 0;
 var songNumWords = song.rowLen * song.patternLen * (song.endPattern + 1) * 2;
 var songMixBuf = new Int32Array(songNumWords);
