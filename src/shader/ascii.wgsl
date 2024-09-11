@@ -21,13 +21,13 @@ fn colorBurn(base: f32, blend: f32) -> f32 {
 @fragment
 fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
     let downscale = vec2i(FragCoord.xy / 8) * 8;
-    let color = textureLoad(raymarchTexture, downscale, 0);
+    var color = textureLoad(raymarchTexture, downscale, 0);
 
     // let maskPixel = textureLoad(maskTexture, downscale, 0);
     if textureLoad(maskTexture, downscale, 0).x < 0.7 {
         // return vec4f(1.0) - textureLoad(raymarchTexture, vec2i(FragCoord.xy), 0);
         // return textureLoad(raymarchTexture, vec2i(FragCoord.xy), 0);
-        return color;
+        color *= 2.0;
     }
 
 

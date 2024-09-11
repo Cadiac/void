@@ -139,7 +139,7 @@ async function main() {
   // Buffers
 
   const raymarchUniformsBuffer = device.createBuffer({
-    size: 3 * 4 * 4,
+    size: 2 * 4 * 4,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
@@ -341,19 +341,9 @@ async function main() {
       raymarchUniformsBuffer,
       0,
       new Float32Array([
-        state.camera.position.x,
-        state.camera.position.y,
-        state.camera.position.z,
-        0,
-
-        state.camera.target.x,
-        state.camera.target.y,
-        state.camera.target.z,
-        0,
-
         canvas.width,
         canvas.height,
-        state.now,
+        state.now / 10000,
         state.audio.beat / 255,
       ])
     );

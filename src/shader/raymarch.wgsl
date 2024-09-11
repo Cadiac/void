@@ -7,8 +7,6 @@ const EPSILON = 0.001;
 // const SKY_COLOR = vec3(0.2, 0.2, 0.4);
 
 struct Uniforms {
-    camera: vec3f,
-    lookAt: vec3f, 
     resolution: vec2f,
     time: f32,
     beat: f32,
@@ -22,23 +20,23 @@ struct Uniforms {
 // }
 
 // http://en.wikipedia.org/wiki/Rotation_matrix#Basic_rotations
-fn rotateX(theta: f32) -> mat3x3<f32> {
-    let s = sin(theta);
-    let c = cos(theta);
-    return mat3x3(vec3(1, 0, 0), vec3(0, c, -s), vec3(0, s, c));
-}
+// fn rotateX(theta: f32) -> mat3x3<f32> {
+//     let s = sin(theta);
+//     let c = cos(theta);
+//     return mat3x3(vec3(1, 0, 0), vec3(0, c, -s), vec3(0, s, c));
+// }
 
-fn rotateY(theta: f32) -> mat3x3<f32> {
-    let s = sin(theta);
-    let c = cos(theta);
-    return mat3x3(vec3(c, 0, s), vec3(0, 1, 0), vec3(-s, 0, c));
-}
+// fn rotateY(theta: f32) -> mat3x3<f32> {
+//     let s = sin(theta);
+//     let c = cos(theta);
+//     return mat3x3(vec3(c, 0, s), vec3(0, 1, 0), vec3(-s, 0, c));
+// }
 
-fn rotateZ(theta: f32) -> mat3x3<f32> {
-    let s = sin(theta);
-    let c = cos(theta);
-    return mat3x3(vec3(c, -s, 0), vec3(s, c, 0), vec3(0, 0, 1));
-}
+// fn rotateZ(theta: f32) -> mat3x3<f32> {
+//     let s = sin(theta);
+//     let c = cos(theta);
+//     return mat3x3(vec3(c, -s, 0), vec3(s, c, 0), vec3(0, 0, 1));
+// }
 
 fn sphere(pos: vec3f, radius: f32) -> f32 {
     return length(pos) - radius;
@@ -118,7 +116,10 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
 
     // lookAt
     // let s = normalize(cross(normalize(vec3(0.0, -1.0, 0.0)), f));
-    let l = normalize(uniforms.lookAt - uniforms.camera);
+    // let l = normalize(uniforms.lookAt - uniforms.camera);
+    let camera = vec3f(10.0 + 10 * sin(uniforms.time), 5 * sin(uniforms.time), 10 * cos(uniforms.time));
+
+    let l = normalize(-camera);
     let s = normalize(cross(vec3(0.0, -1.0, 0.0), l));
     var dir = (mat4x4(
         vec4(s, .0), vec4(cross(l, s), .0), vec4(-l, .0), vec4(.0, .0, .0, 1.)) *                                       // viewToWorld
@@ -131,8 +132,8 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
     var reflection = 1.0;
 
     var rayDist = 0.0;
-    var dist = rayMarch(uniforms.camera, dir);
-    var pos = uniforms.camera + dist * dir;
+    var dist = rayMarch(camera, dir);
+    var pos = camera + dist * dir;
 
     for (var i = 0; i < 4; i++) {
         // Sky
@@ -141,7 +142,7 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
             var sky_color = vec3(0.1) - 0.5 * dir.y;
 
             // Fade to fog further away
-            let dist = (25000. - uniforms.camera.y) / dir.y;
+            let dist = (25000. - camera.y) / dir.y;
             let e = exp2(-abs(dist) * vec3(0.0001));
             sky_color = sky_color * e + (1.0 - e) * vec3(0.98, 1.0, 0.96);
 
@@ -193,10 +194,10 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
         // ) * e + (1.0 - e) * vec3(0.98, 1.0, 0.96), reflection);                                     // Fog color
 
         color = mix(color, (
-            vec3(0.0) +                                                                             // Ambient
-            vec3(0.1) * clamp(dot(sunDir, normal), 0.0, 1.0) +                                      // Diffuse
+            vec3(0.0) +                                                                             // Ambient, TODO maybe remove?
+            vec3(0.5, 0.7, 0.6) * clamp(dot(sunDir, normal), 0.0, 1.0) +                            // Diffuse
             vec3(0.8) * pow(clamp(dot(reflect(sunDir, normal), dir), 0.0, 1.0), 10.0)               // Specular
-        ) * e + (1.0 - e) * vec3(0.98, 1.0, 0.96), reflection);                                     // Fog color
+        ) * e + (1.0 - e) * vec3(1, 0.6, 0), reflection);                                           // Fog color
 
         reflection *= 0.5;
 
