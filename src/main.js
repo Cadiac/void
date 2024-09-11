@@ -6,8 +6,8 @@ const DEBUG = true;
 var canvas = document.createElement("canvas");
 canvas.style.position = "fixed";
 canvas.style.left = canvas.style.top = 0;
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+var canvasWidth = (canvas.width = window.innerWidth);
+var canvasHeight = (canvas.height = window.innerHeight);
 
 // import { loadAudio, startAudio } from "./sointu.js";
 import { loadAudio, startAudio } from "./soundbox.js";
@@ -102,7 +102,7 @@ async function main() {
 
   const raymarchPassTexture = device.createTexture({
     format,
-    size: [canvas.width, canvas.height],
+    size: [canvasWidth, canvasHeight],
     usage:
       GPUTextureUsage.TEXTURE_BINDING |
       GPUTextureUsage.COPY_DST |
@@ -111,7 +111,7 @@ async function main() {
 
   const maskTexture = device.createTexture({
     format,
-    size: [canvas.width, canvas.height],
+    size: [canvasWidth, canvasHeight],
     usage:
       GPUTextureUsage.TEXTURE_BINDING |
       GPUTextureUsage.COPY_DST |
@@ -120,7 +120,7 @@ async function main() {
 
   const sobelTexture = device.createTexture({
     format,
-    size: [canvas.width, canvas.height],
+    size: [canvasWidth, canvasHeight],
     usage:
       GPUTextureUsage.TEXTURE_BINDING |
       GPUTextureUsage.STORAGE_BINDING |
@@ -129,7 +129,7 @@ async function main() {
 
   const asciiTexture = device.createTexture({
     format,
-    size: [canvas.width, canvas.height],
+    size: [canvasWidth, canvasHeight],
     usage:
       GPUTextureUsage.TEXTURE_BINDING |
       GPUTextureUsage.COPY_DST |
@@ -235,8 +235,8 @@ async function main() {
   const maskTextureContext = document.createElement("canvas").getContext("2d");
   const asciiTextureContext = document.createElement("canvas").getContext("2d");
 
-  maskTextureContext.canvas.width = canvas.width;
-  maskTextureContext.canvas.height = canvas.height;
+  maskTextureContext.canvas.width = canvasWidth;
+  maskTextureContext.canvas.height = canvasHeight;
 
   // Inlined ascii texture creation
   const characters = " .:coePO0■|/-\\";
@@ -299,8 +299,8 @@ async function main() {
     maskTextureContext.fillRect(
       margin,
       margin,
-      canvas.width - margin * 2,
-      canvas.height - margin * 2
+      canvasWidth - margin * 2,
+      canvasHeight - margin * 2
     );
 
     maskTextureContext.font = "160px s";
@@ -320,13 +320,13 @@ async function main() {
     maskTextureContext.fillText(
       message,
       5000 - ((state.now / 2) % 20000),
-      canvas.height / 2
+      canvasHeight / 2
     );
 
     device.queue.copyExternalImageToTexture(
       { source: maskTextureContext.canvas },
       { texture: maskTexture },
-      { width: canvas.width, height: canvas.height }
+      { width: canvasWidth, height: canvasHeight }
     );
 
     // updateFFT();
@@ -341,8 +341,8 @@ async function main() {
       raymarchUniformsBuffer,
       0,
       new Float32Array([
-        canvas.width,
-        canvas.height,
+        canvasWidth,
+        canvasHeight,
         state.now / 10000,
         state.audio.beat / 255,
       ])
@@ -377,8 +377,8 @@ async function main() {
     computePassEncoder.setPipeline(sobelComputePipeline);
     computePassEncoder.setBindGroup(0, sobelComputeBindGroup);
     computePassEncoder.dispatchWorkgroups(
-      Math.ceil(canvas.width / 8),
-      Math.ceil(canvas.height / 8)
+      Math.ceil(canvasWidth / 8),
+      Math.ceil(canvasHeight / 8)
     );
     computePassEncoder.end();
 
