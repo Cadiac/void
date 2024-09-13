@@ -30,7 +30,6 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
         color *= 2.0;
     }
 
-
     let sobel = textureLoad(sobelTexture, vec2i(FragCoord.xy), 0);
 
     var base = uniforms.background * color;
@@ -54,7 +53,7 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
             vec2((i32(round(sobel.x * 8.0)) % 4) * 8 + 80 + i32(FragCoord.x % 8),
                 i32(FragCoord.y % 8)),
             0
-        ) * color * uniforms.edges;
+        ) * color * vec4(1.0, 0.6, 0.0, 1.0) * uniforms.edges;
     } else {
         // let luminance = 0.2 * color.r + 0.7 * color.g + 0.1 * color.b;
         // let quantized = floor(luminance * 10) / 10;

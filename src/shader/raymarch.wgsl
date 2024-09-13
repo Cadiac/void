@@ -71,17 +71,17 @@ fn scene(pos: vec3f) -> f32 {
     // let qq = opRepeat(pos - vec3f(5.0), vec3f(10.0));
 
     // let dist = cube(
-    //     rotateX(uniforms.time * 0.0005) * rotateY(uniforms.time * 0.0005) * rotateZ(uniforms.time * 0.0005) * pos, vec3(4.0)
+    //     rotateX(uniforms.time * 10) * rotateY(uniforms.time * 10) * rotateZ(uniforms.time * 10) * pos, vec3(2.0)
     // );
 
-    // let dist = min(sphere(pos, 10.0), cube(pos - vec3f(0.0, 20.0, 0.0), vec3(5.0)));
+    // let dist = min(sphere(pos, 1.0), cube(pos - vec3f(0.0, 5.0, 0.0), vec3(2.0)));
 
     // return dist;
 
-    return opSubtraction(
-        sphere(opRepeat(pos, vec3f(4.5 + sin(uniforms.time * 0.0001))), 3.0),
+    return min(opSubtraction(
+        sphere(opRepeat(pos, vec3f(4.5 + sin(uniforms.time))), 3.0),
         cube(pos, vec3(20.0))
-    );
+    ), sphere(pos, 1.5 + 0.2 * uniforms.beat));
 }
 
 fn rayMarch(pos: vec3f, rayDir: vec3f) -> f32 {
@@ -117,7 +117,7 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
     // lookAt
     // let s = normalize(cross(normalize(vec3(0.0, -1.0, 0.0)), f));
     // let l = normalize(uniforms.lookAt - uniforms.camera);
-    let camera = vec3f(10.0 + 10 * sin(uniforms.time), 5 * sin(uniforms.time), 10 * cos(uniforms.time));
+    let camera = vec3f(7 * sin(uniforms.time), 0, 7 * cos(uniforms.time));
 
     let l = normalize(-camera);
     let s = normalize(cross(vec3(0.0, -1.0, 0.0), l));
@@ -139,19 +139,20 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
         // Sky
         if dist >= MAX_DIST {
             // Deeper blue when looking up
-            var sky_color = vec3(0.1) - 0.5 * dir.y;
+            // var sky_color = vec3(0.1) - 0.5 * dir.y;
+            var sky_color = vec3(1.0);
 
-            // Fade to fog further away
-            let dist = (25000. - camera.y) / dir.y;
-            let e = exp2(-abs(dist) * vec3(0.0001));
-            sky_color = sky_color * e + (1.0 - e) * vec3(0.98, 1.0, 0.96);
+            // // Fade to fog further away
+            // let dist = (25000. - camera.y) / dir.y;
+            // let e = exp2(-abs(dist) * vec3(0.0001));
+            // sky_color = sky_color * e + (1.0 - e) * vec3(0.98, 1.0, 0.96);
 
-            // Sun
-            let dotSun = dot(sunDir, dir);
-            if dotSun > 0.99 {
-                let h = dir.y - sunDir.y;
-                sky_color = vec3(0.9);
-            }
+            // // Sun
+            // let dotSun = dot(sunDir, dir);
+            // if dotSun > 0.99 {
+            //     let h = dir.y - sunDir.y;
+            //     sky_color = vec3(0.9);
+            // }
 
             color = mix(color, sky_color, reflection);
             break;
@@ -193,13 +194,32 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
         //     vec3(0.8) * pow(clamp(dot(reflect(sunDir, normal) * shadow, dir), 0.0, 1.0), 10.0)      // Specular
         // ) * e + (1.0 - e) * vec3(0.98, 1.0, 0.96), reflection);                                     // Fog color
 
+        // color = mix(color, (
+        //     vec3(0.0) +                                                                             // Ambient, TODO maybe remove?
+        //     vec3(0.5, 0.7, 0.6) * clamp(dot(sunDir, normal), 0.0, 1.0) +                            // Diffuse
+        //     vec3(0.8) * pow(clamp(dot(reflect(sunDir, normal), dir), 0.0, 1.0), 10.0)               // Specular
+        // ) * e + (1.0 - e) * vec3(1, 0.6, 0), reflection);                                           // Fog color
+
+        var diffuse = vec3(0.5);
+        if (sphere(pos, 2.5) < 0.0) {
+            diffuse = uniforms.beat * 2 * vec3(1.0, 0.6, 0.0);
+        } 
+
         color = mix(color, (
-            vec3(0.0) +                                                                             // Ambient, TODO maybe remove?
-            vec3(0.5, 0.7, 0.6) * clamp(dot(sunDir, normal), 0.0, 1.0) +                            // Diffuse
-            vec3(0.8) * pow(clamp(dot(reflect(sunDir, normal), dir), 0.0, 1.0), 10.0)               // Specular
-        ) * e + (1.0 - e) * vec3(1, 0.6, 0), reflection);                                           // Fog color
+            vec3(0.1) +                                                                             // Ambient, TODO maybe remove?
+            diffuse * clamp(dot(sunDir, normal), 0.0, 1.0)                                           // Diffuse
+            // vec3(0.8) * pow(clamp(dot(reflect(sunDir, normal), dir), 0.0, 1.0), 10.0)               // Specular
+        ) * e + (1.0 - e) * vec3(1.0), reflection);                                           // Fog color
 
         reflection *= 0.5;
+        if (sphere(pos, 2.5) < 0.0) {
+            reflection = 0.1;
+        }
+
+        // if (sphere(pos, 2.5) > 0.0) {
+        //     break;    
+        // }
+        // reflection = 0.1;
 
         dir = reflect(dir, normal);
         dist = rayMarch(pos, dir);

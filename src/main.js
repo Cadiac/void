@@ -25,7 +25,7 @@ const state = {
     down: false,
   },
   audio: {
-    offset: 3,
+    offset: 0,
     beat: 0,
   },
   ascii: {
@@ -239,7 +239,8 @@ async function main() {
   maskTextureContext.canvas.height = canvasHeight;
 
   // Inlined ascii texture creation
-  const characters = " .:coePO0■|/-\\";
+  // const characters = " .:coePO0■|/-\\";
+  const characters = " .:<o1O0#■|/-\\";
 
   const width = 8 * characters.length;
   const height = 8;
@@ -294,6 +295,18 @@ async function main() {
     // maskTextureContext.fillStyle = "#000";
     // maskTextureContext.fillRect(0, 0, width, height);
 
+    // maskTextureContext.fillStyle = "#000";
+    // maskTextureContext.fillRect(0, 0, canvasWidth, canvasHeight);
+    // maskTextureContext.fillStyle = "#fff";
+    // for (let y = 0; y < canvasHeight; y = y + 8) {
+    //   maskTextureContext.fillRect(
+    //     0,
+    //     y,
+    //     Math.floor(state.now / 8 - y * 2) * 8,
+    //     y + 8
+    //   );
+    // }
+
     maskTextureContext.fillStyle = "#fff";
     const margin = 30;
     maskTextureContext.fillRect(
@@ -303,7 +316,7 @@ async function main() {
       canvasHeight - margin * 2
     );
 
-    maskTextureContext.font = "160px s";
+    maskTextureContext.font = "200px s";
     maskTextureContext.fillStyle = "#000";
 
     const message = [
