@@ -31,6 +31,9 @@ var songMixBuf = new Int32Array(songNumWords);
  *    distribution.
  *
  */
+
+// NOTE: Channels 14 and 15 (ARP) and 23 (FX_DIST) are not supported to save some space!
+
 //--------------------------------------------------------------------------
 // Private methods
 //--------------------------------------------------------------------------
@@ -48,7 +51,7 @@ var osc_tri = (value) => {
 // 174.61.. / 44100 = 0.003959503758 (F3)
 var getnotefreq = (n) => 0.00396 * 2 ** ((n - 128) / 12);
 
-var createNote = (instr, n, rowLen) => {
+var createNote = (instr, n) => {
   var osc1 = mOscillators[instr.i[0]],
     o1vol = instr.i[1],
     o1xenv = instr.i[3] / 32,
@@ -60,9 +63,7 @@ var createNote = (instr, n, rowLen) => {
     sustain = instr.i[11] * instr.i[11] * 4,
     release = instr.i[12] * instr.i[12] * 4,
     releaseInv = 1 / release,
-    expDecay = -instr.i[13] / 16,
-    arp = instr.i[14],
-    arpInterval = rowLen * 2 ** (2 - instr.i[15]);
+    expDecay = -instr.i[13] / 16;
 
   var noteBuf = new Int32Array(attack + sustain + release);
 
@@ -71,21 +72,13 @@ var createNote = (instr, n, rowLen) => {
     c2 = 0;
 
   // Local variables.
-  var j, j2, e, rsample, o1t, o2t;
+  var j, e, rsample, o1t, o2t;
 
   // Generate one note (attack + sustain + release)
-  for (j = 0, j2 = 0; j < attack + sustain + release; j++, j2++) {
-    if (j2 >= 0) {
-      // Switch arpeggio note.
-      arp = (arp >> 8) | ((arp & 255) << 4);
-      j2 -= arpInterval;
-
-      // Calculate note frequencies for the oscillators
-      o1t = getnotefreq(n + (arp & 15) + instr.i[2] - 128);
-      o2t =
-        getnotefreq(n + (arp & 15) + instr.i[6] - 128) *
-        (1 + 0.0008 * instr.i[7]);
-    }
+  for (j = 0; j < attack + sustain + release; j++) {
+    // Calculate note frequencies for the oscillators
+    o1t = getnotefreq(n + instr.i[2] - 128);
+    o2t = getnotefreq(n + instr.i[6] - 128) * (1 + 0.0008 * instr.i[7]);
 
     // Envelope
     e = 1;
@@ -154,17 +147,6 @@ var generate = () => {
 
     // Pattern rows
     for (row = 0; row < patternLen; ++row) {
-      // Execute effect command.
-      var cmdNo = cp ? instr.c[cp - 1].f[row] : 0;
-      if (cmdNo) {
-        instr.i[cmdNo - 1] = instr.c[cp - 1].f[row + patternLen] || 0;
-
-        // Clear the note cache since the instrument has changed.
-        if (cmdNo < 17) {
-          noteCache = [];
-        }
-      }
-
       // Put performance critical instrument properties in local variables
       var oscLFO = mOscillators[instr.i[16]],
         lfoAmt = instr.i[17] / 512,
@@ -173,7 +155,6 @@ var generate = () => {
         fxFilter = instr.i[20],
         fxFreq = (instr.i[21] * 43.23529 * 3.141592) / 44100,
         q = 1 - instr.i[22] / 255,
-        dist = instr.i[23] * 1e-5,
         drive = instr.i[24] / 32,
         panAmt = instr.i[25] / 512,
         panFreq = (6.283184 * 2 ** (instr.i[26] - 9)) / rowLen,
@@ -217,14 +198,6 @@ var generate = () => {
           high = q * (rsample - band) - low;
           band += f * high;
           rsample = fxFilter == 3 ? band : fxFilter == 1 ? high : low;
-
-          // Distortion
-          if (dist) {
-            rsample *= dist;
-            rsample =
-              rsample < 1 ? (rsample > -1 ? osc_sin(rsample * 0.25) : -1) : 1;
-            rsample /= dist;
-          }
 
           // Drive
           rsample *= drive;

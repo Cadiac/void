@@ -2,12 +2,11 @@ import debug from "./debug.js";
 import fps from "./fps.js";
 
 const DEBUG = true;
+const FULLSCREEN = true;
 
 var canvas = document.createElement("canvas");
 canvas.style.position = "fixed";
 canvas.style.left = canvas.style.top = 0;
-var canvasWidth = (canvas.width = window.innerWidth);
-var canvasHeight = (canvas.height = window.innerHeight);
 
 // import { loadAudio, startAudio } from "./sointu.js";
 import { loadAudio, startAudio } from "./soundbox.js";
@@ -74,8 +73,14 @@ async function main() {
     debug.setup(state);
   }
 
+  // Wait for a to let the browser to properly enter fullscreen.
+  if (FULLSCREEN) {
+    await document.documentElement.requestFullscreen();
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+
   const { analyser, audioCtx } = startAudio();
-  analyser.fftSize = 256;
+  analyser.fftSize = 1024;
   const fftDataArray = new Uint8Array(analyser.frequencyBinCount);
 
   if (DEBUG) {
@@ -97,6 +102,9 @@ async function main() {
   const vertexShaderCode = DEBUG
     ? await fetch("src/shader/vertex.wgsl").then((res) => res.text())
     : MINIFIED_VERTEX_SHADER;
+
+  var canvasWidth = (canvas.width = window.innerWidth);
+  var canvasHeight = (canvas.height = window.innerHeight);
 
   // Textures
 
