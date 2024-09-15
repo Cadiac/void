@@ -40,13 +40,7 @@ var songMixBuf = new Int32Array(songNumWords);
 
 // Oscillators
 var osc_sin = (value) => Math.sin(value * 6.283184);
-var osc_saw = (value) => 2 * (value % 1) - 1;
 var osc_square = (value) => (value % 1 < 0.5 ? 1 : -1);
-var osc_tri = (value) => {
-  var v2 = (value % 1) * 4;
-  if (v2 < 2) return v2 - 1;
-  return 3 - v2;
-};
 
 // 174.61.. / 44100 = 0.003959503758 (F3)
 var getnotefreq = (n) => 0.00396 * 2 ** ((n - 128) / 12);
@@ -114,7 +108,7 @@ var createNote = (instr, n) => {
 //--------------------------------------------------------------------------
 
 // Array of oscillator functions
-var mOscillators = [osc_sin, osc_square, osc_saw, osc_tri];
+var mOscillators = [osc_sin, osc_square];
 
 //--------------------------------------------------------------------------
 // Public methods
@@ -166,10 +160,10 @@ var generate = () => {
 
       // Generate notes for this pattern row
       for (col = 0; col < 4; ++col) {
-        n = cp ? instr.c[cp - 1].n[row + col * patternLen] : 0;
+        n = cp ? instr.c[cp - 1][row + col * patternLen] : 0;
         if (n) {
           if (!noteCache[n]) {
-            noteCache[n] = createNote(instr, n, rowLen);
+            noteCache[n] = createNote(instr, n);
           }
 
           // Copy note from the note cache
