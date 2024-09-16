@@ -248,7 +248,7 @@ async function main() {
 
   // Inlined ascii texture creation
   // const characters = " .:coePO0■|/-\\";
-  const characters = " .:<o1O0#■|/-\\";
+  const characters = "  .:oX1O0■|/-\\";
 
   const width = 8 * characters.length;
   const height = 8;
