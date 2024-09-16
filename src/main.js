@@ -324,24 +324,32 @@ async function main() {
       canvasHeight - margin * 2
     );
 
-    maskTextureContext.font = "200px s";
+    // maskTextureContext.font = "200px s";
+    maskTextureContext.font = "100px monospace";
     maskTextureContext.fillStyle = "#000";
 
     const message = [
-      "LOREM",
-      "IPSUM",
-      "DOLOR",
-      "SIT",
-      "AMET,",
-      "CONSECTETUR",
-      "ADIPISCING",
-      "ELIT",
-    ].join("                                ");
+      "ASCII Dreams ~ ~",
+      "~ ~ by Cadiac",
+      ,
+      ,
+      ,
+      ,
+      ,
+      "Greetings to:",
+      "(papu)",
+      "pumpuli",
+      "opossumi",
+      "Sampozki",
+      "shiona",
+      "ninnnu",
+      "Pinqvin",
+    ].join("                ");
 
     maskTextureContext.fillText(
       message,
-      5000 - ((state.now / 2) % 20000),
-      canvasHeight / 2
+      5000 - state.now / 4,
+      canvasHeight - 112
     );
 
     device.queue.copyExternalImageToTexture(
