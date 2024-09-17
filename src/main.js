@@ -30,8 +30,8 @@ const state = {
   ascii: {
     background: 1.0,
     // threshold: 0.2,
-    fill: 0.5,
-    edges: 1,
+    // fill: 0.5,
+    // edges: 1,
   },
   bloom: {
     threshold: 0.8,
@@ -147,12 +147,12 @@ async function main() {
   // Buffers
 
   const raymarchUniformsBuffer = device.createBuffer({
-    size: 2 * 4 * 4,
+    size: 4 * 4,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
   const asciiUniformsBuffer = device.createBuffer({
-    size: 4 * 4,
+    size: 4,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
@@ -320,14 +320,15 @@ async function main() {
       "",
       "",
       "  Cadiac @ Demohäsä 2024",
+      ":~$ exit",
     ];
 
     const duration = 10000,
-      i = Math.floor(state.now / duration) % messages.length,
-      c = Math.floor((state.now - i * duration) / 100), // speed
+      i = Math.floor(state.now / duration),
+      c = Math.floor((state.now - i * duration) / 100),
       txt =
         messages[i].slice(0, c) +
-        (Math.floor(state.now / 1000) % 2 === 0 ? "█" : ""),
+        (Math.floor(state.now / 625) % 2 === 0 ? "█" : ""),
       x = margin * 3,
       y = i === 0 ? 200 : canvasHeight - margin * 4;
 
@@ -343,8 +344,8 @@ async function main() {
     analyser.getByteFrequencyData(fftDataArray);
     if (DEBUG) {
       state.audio.beat = fftDataArray[state.audio.offset];
+      state.ascii.background = fftDataArray[state.audio.offset] / 255;
     }
-    state.ascii.background = fftDataArray[state.audio.offset] / 255;
 
     // updateUniforms();
     device.queue.writeBuffer(
@@ -353,18 +354,14 @@ async function main() {
       new Float32Array([
         canvasWidth,
         canvasHeight,
-        20 + state.now / 10000,
+        state.now / 10000,
         state.audio.beat / 255,
       ])
     );
     device.queue.writeBuffer(
       asciiUniformsBuffer,
       0,
-      new Float32Array([
-        state.ascii.background,
-        state.ascii.fill,
-        state.ascii.edges,
-      ])
+      new Float32Array([fftDataArray[state.audio.offset] / 255])
     );
 
     var commandEncoder = device.createCommandEncoder();

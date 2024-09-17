@@ -7,17 +7,7 @@ var<workgroup> sharedDirectionCounts: array<atomic<u32>, 8>;
 @compute @workgroup_size(8, 8)
 fn f(@builtin(global_invocation_id) global_id: vec3u) {
     var sobel = vec2f(0);
-    // var y = 0.0;
     let pos = vec2i(global_id.xy);
-
-    // Initialize shared memory - doesn't seem mandatory
-    // if global_id.x == 0u && global_id.y == 0u {
-    //     for (var i = 0; i < 8; i++) {
-    //         atomicStore(&sharedDirectionCounts[i], 0u);
-    //     }
-    // }
-
-    // workgroupBarrier();
 
     const kernel = array(
         vec3f(-1, 0, 1),
@@ -25,18 +15,15 @@ fn f(@builtin(global_invocation_id) global_id: vec3u) {
         vec3f(-1, 0, 1)
     );
 
-    // Apply Sobel filter
+    // Apply Sobel filter (https://en.wikipedia.org/wiki/Sobel_operator)
     for (var dy: i32 = -1; dy <= 1; dy++) {
         for (var dx: i32 = -1; dx <= 1; dx++) {
             let texCoord = pos + vec2i(dx, dy);
-            // let maskPixel = textureLoad(maskTexture, texCoord, 0);
 
             if textureLoad(maskTexture, texCoord, 0).x > 0.7 {
                 let red = textureLoad(raymarchTexture, texCoord, 0).x;
                 sobel += vec2(red * kernel[dy + 1][dx + 1], red * kernel[dx + 1][dy + 1]);
             }
-
-            // y += texel.r * kernel[dx + 1][dy + 1];
         }
     }
 
@@ -53,7 +40,6 @@ fn f(@builtin(global_invocation_id) global_id: vec3u) {
     workgroupBarrier();
 
     // Find the most common direction within the 8x8 area
-    // var isEdgeTile = 0.0;
     var mostCommonDirection = 0.0;
     var maxCount = 0u;
     for (var i = 0u; i < 8u; i++) {

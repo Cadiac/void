@@ -1,13 +1,10 @@
-// https://sb.bitsnbites.eu/?data=U0JveA4C7dmxSsNQFAbgc5NUxMHq2EHo5mgHwcHFxdnBxYdwdBMhKBIqpSB9BTcfwamv4OLj1LQpVkURNyPfF35yzs0NnGS9L72I7egXqfsQqSy7MYheGbWjFFm_jGKWPa9HpCwv3uemGt6N7qO1Lm-Ho3F7x4_r8XA0afP88__f5g8AAAAAAAD-n9nFSZ04jWLteL9ZyjYj-vMiX0gpZfPUD_IqqsWW6i0f-79uNe_X97bM_10PAAAAAADAb5VNriIdLlfS9DF2dvOzvOlWSR9e_HxQ07ajG0dNAAAAAAAARIyaDIqNvYO6fOpEmlbRP-9sFc2GtDSvJz9cAAAAAAAA0Cav
+// Song link, manually modified by rounding some values be less accurate to save some bits.
+// Also columns data has been simplified, as no changing effects are used.
+// https://sb.bitsnbites.eu/?data=U0JveA4C7dm_SsNQFAfgc5NUxMEKTgpCN0c7CA4uLs4OLj6Eo5sIQZFQKQXpK7j5CE59BV_Dh6jpP6uiiJuR7ws_cs69CZxkvS_bEZvRKVL7IVJZtqMbW2XUjlJknTKKcfa8OulTlhfvc1P17vr30ViXt73-oLnjx_Wg1x82ef7J_2_yBwAAAAAAAP_P-OKkTpxGsXK8P1vK1iM6szKfSillk9RbeRXVdKd6y8f-r1vO-_W9KfN_1wMAAAAAAPBb5SxXkQ7nK2n0GDu7-Vm-6JdJH179fFTTtMMbh00AAAAAAABE9GfpFmt7B3X51Io0qqJz3tooFo-kuUk9_OECAAAAAACAJnkF
 
 // Song data
-// This music has been exported by SoundBox. You can use it with
-// http://sb.bitsnbites.eu/player-small.js in your own product.
+// This music has been exported by SoundBox
 
-// See http://sb.bitsnbites.eu/demo.html for an example of how to
-// use it in a demo.
-
-// Song data
 var song = {
   songData: [
     {
@@ -44,7 +41,7 @@ var song = {
         8, // FX_DELAY_TIME
       ],
       // Patterns
-      p: [, , 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
+      p: [, , , , 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
       // Columns
       c: [
         [131, 135, 137, 138, 140, 145],
@@ -87,7 +84,7 @@ var song = {
         0, // FX_DELAY_TIME
       ],
       // Patterns
-      p: [3, 3, 3, 3, 3, 3, 1, 1, 1, 2, 1, 1, 1, 2, , , 2, 3],
+      p: [, , 3, 3, 3, 3, 3, 3, 1, 1, 1, 2, 1, 1, 1, 2, , , 2, 3],
       // Columns
       c: [
         [
@@ -187,7 +184,7 @@ var song = {
         3, // FX_DELAY_TIME
       ],
       // Patterns
-      p: [, , , , , 1, , , , 1, , , , 1, , , 1],
+      p: [, , , , , , , 1, , , , 1, , , , 1, , , 1],
       // Columns
       c: [
         [, , , , , , , , , , , , 135, , , , , , , , , , , , , , , , 135, , 135],
@@ -227,7 +224,7 @@ var song = {
         4, // FX_DELAY_TIME
       ],
       // Patterns
-      p: [, , , , , , 1, 1, 1, 1, 1, 1, 1, 1],
+      p: [, , , , , , , , 1, 1, 1, 1, 1, 1, 1, 1],
       // Columns
       c: [
         [
@@ -266,9 +263,9 @@ var song = {
       ],
     },
   ],
-  rowLen: 6615, // In sample lengths
+  rowLen: 6891, // In sample lengths
   patternLen: 32, // Rows per pattern
-  endPattern: 20, // End pattern
+  endPattern: 22, // End pattern
   numChannels: 4, // Number of channels
 };
 
