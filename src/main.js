@@ -64,8 +64,6 @@ async function main() {
     return;
   }
 
-  state.epoch = performance.now();
-
   if (DEBUG) {
     if (!navigator.gpu) {
       alert("WebGPU support is required. Try running this with Google Chrome!");
@@ -78,6 +76,8 @@ async function main() {
     await document.documentElement.requestFullscreen();
     await new Promise((r) => setTimeout(r, 1000));
   }
+
+  state.epoch = performance.now();
 
   const { analyser, audioCtx } = startAudio();
   analyser.fftSize = 1024;
@@ -309,32 +309,29 @@ async function main() {
     maskTextureContext.font = "100px monospace";
     maskTextureContext.fillStyle = "#000";
 
-    [
-      "Greetings:",
+    const messages = [
+      ":~$ ./run.sh",
+      "",
+      "",
+      ":~$ ./greetings",
       "(papu)  pumpuli  opossumi",
-      "BFlorry        sampozki ඞ",
+      "BFlorry     ඞ    sampozki",
       "shiona   ninnnu   Pinqvin",
-      ,
-      ,
-      ,
-      ,
-      "~/Cadiac @ Demohäsä 2024",
-    ].map((message, i) => {
-      const offset = (i + 1) * canvasWidth * 3;
-      const pauseTime = (margin * 3 - offset) / -1;
-      const x =
-        state.now <= pauseTime
-          ? -state.now + offset
-          : state.now <= pauseTime + 3000
-          ? margin * 3
-          : -(state.now - 3000) + offset;
+      "",
+      "",
+      "  Cadiac @ Demohäsä 2024",
+    ];
 
-      maskTextureContext.fillText(
-        message,
-        x,
-        i ? canvasHeight - margin * 3 : margin * 4
-      );
-    });
+    const duration = 10000,
+      i = Math.floor(state.now / duration) % messages.length,
+      c = Math.floor((state.now - i * duration) / 100), // speed
+      txt =
+        messages[i].slice(0, c) +
+        (Math.floor(state.now / 1000) % 2 === 0 ? "█" : ""),
+      x = margin * 3,
+      y = i === 0 ? 200 : canvasHeight - margin * 4;
+
+    maskTextureContext.fillText(txt, x, y);
 
     device.queue.copyExternalImageToTexture(
       { source: maskTextureContext.canvas },
