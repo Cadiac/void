@@ -297,26 +297,8 @@ async function main() {
 
     state.now = now;
 
-    // updateMaskTexture(device, maskTexture, maskTextureContext);
-    // const { width, height } = maskTextureContext.canvas;
-
-    // maskTextureContext.fillStyle = "#000";
-    // maskTextureContext.fillRect(0, 0, width, height);
-
-    // maskTextureContext.fillStyle = "#000";
-    // maskTextureContext.fillRect(0, 0, canvasWidth, canvasHeight);
-    // maskTextureContext.fillStyle = "#fff";
-    // for (let y = 0; y < canvasHeight; y = y + 8) {
-    //   maskTextureContext.fillRect(
-    //     0,
-    //     y,
-    //     Math.floor(state.now / 8 - y * 2) * 8,
-    //     y + 8
-    //   );
-    // }
-
     maskTextureContext.fillStyle = "#fff";
-    const margin = 30;
+    const margin = 32;
     maskTextureContext.fillRect(
       margin,
       margin,
@@ -324,33 +306,35 @@ async function main() {
       canvasHeight - margin * 2
     );
 
-    // maskTextureContext.font = "200px s";
     maskTextureContext.font = "100px monospace";
     maskTextureContext.fillStyle = "#000";
 
-    const message = [
-      "ASCII Dreams ~ ~",
-      "~ ~ by Cadiac",
+    [
+      "Greetings:",
+      "(papu)  pumpuli  opossumi",
+      "BFlorry        sampozki ඞ",
+      "shiona   ninnnu   Pinqvin",
       ,
       ,
       ,
       ,
-      ,
-      "Greetings to:",
-      "(papu)",
-      "pumpuli",
-      "opossumi",
-      "Sampozki",
-      "shiona",
-      "ninnnu",
-      "Pinqvin",
-    ].join("                ");
+      "~/Cadiac @ Demohäsä 2024",
+    ].map((message, i) => {
+      const offset = (i + 1) * canvasWidth * 3;
+      const pauseTime = (margin * 3 - offset) / -1;
+      const x =
+        state.now <= pauseTime
+          ? -state.now + offset
+          : state.now <= pauseTime + 3000
+          ? margin * 3
+          : -(state.now - 3000) + offset;
 
-    maskTextureContext.fillText(
-      message,
-      5000 - state.now / 4,
-      canvasHeight - 112
-    );
+      maskTextureContext.fillText(
+        message,
+        x,
+        i ? canvasHeight - margin * 3 : margin * 4
+      );
+    });
 
     device.queue.copyExternalImageToTexture(
       { source: maskTextureContext.canvas },
@@ -372,7 +356,7 @@ async function main() {
       new Float32Array([
         canvasWidth,
         canvasHeight,
-        state.now / 10000,
+        20 + state.now / 10000,
         state.audio.beat / 255,
       ])
     );
