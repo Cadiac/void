@@ -1,6 +1,3 @@
-const MAX_DIST = 250.0;
-const EPSILON = 0.001;
-
 fn sphere(pos: vec3f, radius: f32) -> f32 {
     return length(pos) - radius;
 }
@@ -24,8 +21,8 @@ fn scene(pos: vec3f) -> f32 {
 }
 
 fn rayMarch(pos: vec3f, rayDir: vec3f) -> f32 {
-    var stepDist = EPSILON;
-    var depth = EPSILON;
+    var stepDist = 0.001;
+    var depth = 0.001;
 
     for (var i = 0; i < 250; i++) {
         stepDist = 0.001 * depth;
@@ -38,7 +35,7 @@ fn rayMarch(pos: vec3f, rayDir: vec3f) -> f32 {
 
         depth += dist * 0.5;
 
-        if depth >= MAX_DIST {
+        if depth >= 250 {
             return depth;
         }
     }
@@ -83,7 +80,7 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
 
     for (var i = 0; i < 4; i++) {
         // Sky
-        if dist >= MAX_DIST {
+        if dist >= 250 {
             color = mix(color, vec3(1.0), reflection);
             break;
         }
@@ -91,10 +88,10 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
         // Tetrahedron technique, https://iquilezles.org/articles/normalsSDF/, MIT
         const k = vec2(1, -1);
         let normal = normalize(
-            k.xyy * scene(pos + k.xyy * EPSILON) +
-            k.yyx * scene(pos + k.yyx * EPSILON) +
-            k.yxy * scene(pos + k.yxy * EPSILON) +
-            k.xxx * scene(pos + k.xxx * EPSILON)
+            k.xyy * scene(pos + k.xyy * 0.001) +
+            k.yyx * scene(pos + k.yyx * 0.001) +
+            k.yxy * scene(pos + k.yxy * 0.001) +
+            k.xxx * scene(pos + k.xxx * 0.001)
         );
 
         rayDist += dist;

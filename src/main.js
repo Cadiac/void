@@ -246,8 +246,8 @@ async function main() {
   maskTextureContext.canvas.width = canvasWidth;
   maskTextureContext.canvas.height = canvasHeight;
 
-  // Inlined ascii texture creation
-  // const characters = " .:coePO0■|/-\\";
+  // Inlined ascii texture creation.
+  // First ten characters are for fill and the rest for edges.
   const characters = "  .:oX1O0■|/-\\";
 
   const width = 8 * characters.length;
@@ -286,7 +286,7 @@ async function main() {
       return;
     }
 
-    // update();
+    // Inlined update();
     const now = performance.now() - state.epoch;
 
     if (DEBUG) {
@@ -314,9 +314,9 @@ async function main() {
       "",
       "",
       ":~$ ./greetings",
-      "(papu)  pumpuli  opossumi",
-      "BFlorry     ඞ    sampozki",
-      "shiona   ninnnu   Pinqvin",
+      "(papu)  pumpuli opossumi",
+      "BFlorry    ඞ    sampozki",
+      "shiona   ninnnu  Pinqvin",
       "",
       "",
       "  Cadiac @ Demohäsä 2024",
@@ -330,7 +330,7 @@ async function main() {
         messages[i].slice(0, c) +
         (Math.floor(state.now / 625) % 2 === 0 ? "█" : ""),
       x = margin * 3,
-      y = i === 0 ? 200 : canvasHeight - margin * 4;
+      y = i ? (i == 9 ? canvasHeight / 2 : canvasHeight - margin * 4) : 200;
 
     maskTextureContext.fillText(txt, x, y);
 
