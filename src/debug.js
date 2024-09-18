@@ -4,7 +4,7 @@ function setup(state) {
   const gui = new dat.GUI();
 
   const generalFolder = gui.addFolder("General");
-  generalFolder.add(state, "halt").listen();
+  // generalFolder.add(state, "halt").listen();
   generalFolder.add(state, "now", 0, 100000, 1).listen();
 
   const beatFolder = gui.addFolder("Audio");

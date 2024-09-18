@@ -7,11 +7,12 @@ const FULLSCREEN = true;
 var canvas = document.createElement("canvas");
 canvas.style.position = "fixed";
 canvas.style.left = canvas.style.top = 0;
+// canvas.width = window.innerWidth;
+// canvas.height = window.innerHeight;
 
 import { loadAudio, startAudio } from "./soundbox.js";
 
 const state = {
-  halt: false,
   epoch: 0,
   now: 0,
   audio: {
@@ -244,10 +245,6 @@ async function main() {
   render();
 
   function render() {
-    if (state.halt) {
-      return;
-    }
-
     // update();
     const now = performance.now() - state.epoch;
 
