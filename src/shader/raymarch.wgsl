@@ -120,7 +120,8 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
         pos = pos + dist * dir;
     }
 
-    if uniforms.z < 1 {
+    // Blank "shell" screen at the beginning/end
+    if uniforms.z < 1 || uniforms.z > 10.8 {
         color = vec3(0.6, 0.55, 0.5);
     }
 
