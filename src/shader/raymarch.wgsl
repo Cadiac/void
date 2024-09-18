@@ -100,7 +100,7 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
         let e = exp2(-rayDist * 0.05 * vec3(1.0));                                                  // Fog
 
         var diffuse = vec3(0.5);
-        if (sphere(pos, 2.5) < 0.0) {
+        if (length(pos) < 2) {
             diffuse = uniforms.w * 2 * vec3(1.0, 0.6, 0.0);
         } 
 
@@ -111,7 +111,7 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
         ) * e + (1.0 - e) * vec3(1.0), reflection);                                                 // Fog color
 
         reflection *= 0.5;
-        if (sphere(pos, 2.5) < 0.0) {
+        if (length(pos) < 2) {
             reflection = 0.1;
         }
 
@@ -121,7 +121,7 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
     }
 
     if uniforms.z < 1 {
-        color = vec3(0.5);
+        color = vec3(0.6, 0.55, 0.5);
     }
 
     return vec4f(color, 1.0);

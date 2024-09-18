@@ -8,52 +8,18 @@ var canvas = document.createElement("canvas");
 canvas.style.position = "fixed";
 canvas.style.left = canvas.style.top = 0;
 
-// import { loadAudio, startAudio } from "./sointu.js";
 import { loadAudio, startAudio } from "./soundbox.js";
 
 const state = {
   halt: false,
   epoch: 0,
   now: 0,
-  keyboard: {
-    forward: false,
-    back: false,
-    left: false,
-    right: false,
-    up: false,
-    down: false,
-  },
   audio: {
     offset: 0,
     beat: 0,
   },
   ascii: {
     background: 1.0,
-    // threshold: 0.2,
-    // fill: 0.5,
-    // edges: 1,
-  },
-  bloom: {
-    threshold: 0.8,
-    color: {
-      red: 0.8,
-      green: 0.8,
-      blue: 0.8,
-    },
-    burn: 1,
-    amplify: 0.5,
-  },
-  camera: {
-    position: {
-      x: 10,
-      y: 0,
-      z: 0,
-    },
-    target: {
-      x: 0,
-      y: 0,
-      z: 0,
-    },
   },
 };
 
@@ -79,13 +45,9 @@ async function main() {
 
   state.epoch = performance.now();
 
-  const { analyser, audioCtx } = startAudio();
+  const analyser = startAudio();
   analyser.fftSize = 1024;
   const fftDataArray = new Uint8Array(analyser.frequencyBinCount);
-
-  if (DEBUG) {
-    setupKeyboardListener(audioCtx);
-  }
 
   const adapter = await navigator.gpu.requestAdapter();
   const device = await adapter.requestDevice();
@@ -246,8 +208,8 @@ async function main() {
   maskTextureContext.canvas.width = canvasWidth;
   maskTextureContext.canvas.height = canvasHeight;
 
-  // Inlined ascii texture creation.
-  // First ten characters are for fill and the rest for edges.
+  // Inlined "ASCII" texture creation.
+  // First ten characters are for the fill and the rest for edges.
   const characters = "  .:oX1O0■|/-\\";
 
   const width = 8 * characters.length;
@@ -286,13 +248,12 @@ async function main() {
       return;
     }
 
-    // Inlined update();
+    // update();
     const now = performance.now() - state.epoch;
 
     if (DEBUG) {
       const dt = now - state.now;
       fps.update(dt);
-      updateCamera(dt);
     }
 
     state.now = now;
@@ -310,7 +271,9 @@ async function main() {
     maskTextureContext.fillStyle = "#000";
 
     const messages = [
+      "",
       ":~$ ./run.sh",
+      "",
       "",
       "",
       ":~$ ./greetings",
@@ -319,18 +282,28 @@ async function main() {
       "shiona   ninnnu  Pinqvin",
       "",
       "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
       "  Cadiac @ Demohäsä 2024",
+      "",
+      "",
       ":~$ exit",
     ];
 
-    const duration = 10000,
+    const duration = 5000,
       i = Math.floor(state.now / duration),
       c = Math.floor((state.now - i * duration) / 100),
       txt =
         messages[i].slice(0, c) +
         (Math.floor(state.now / 625) % 2 === 0 ? "█" : ""),
       x = margin * 3,
-      y = i ? (i == 9 ? canvasHeight / 2 : canvasHeight - margin * 4) : 200;
+      y =
+        i > 1 ? (i == 18 ? canvasHeight / 2 : canvasHeight - margin * 4) : 200;
 
     maskTextureContext.fillText(txt, x, y);
 
@@ -355,7 +328,7 @@ async function main() {
         canvasWidth,
         canvasHeight,
         state.now / 10000,
-        state.audio.beat / 255,
+        fftDataArray[state.audio.offset] / 255,
       ])
     );
     device.queue.writeBuffer(
@@ -406,128 +379,5 @@ async function main() {
     device.queue.submit([commandEncoder.finish()]);
 
     window.requestAnimationFrame(render);
-  }
-
-  function updateCamera(dt) {
-    const direction = {
-      x: state.camera.target.x - state.camera.position.x,
-      y: state.camera.target.y - state.camera.position.y,
-      z: state.camera.target.z - state.camera.position.z,
-    };
-
-    const magnitude = Math.hypot(direction.x, direction.y, direction.z);
-
-    const normalized = {
-      x: direction.x / magnitude,
-      y: direction.y / magnitude,
-      z: direction.z / magnitude,
-    };
-
-    const SPEED = 0.005;
-
-    // matikka on kyl päin vittua, mutta mitä sitten
-    if (state.keyboard.forward) {
-      state.camera.position.x += normalized.x * dt * SPEED;
-      state.camera.position.y += normalized.y * dt * SPEED;
-      state.camera.position.z += normalized.z * dt * SPEED;
-    }
-
-    if (state.keyboard.back) {
-      state.camera.position.x -= normalized.x * dt * SPEED;
-      state.camera.position.y -= normalized.y * dt * SPEED;
-      state.camera.position.z -= normalized.z * dt * SPEED;
-    }
-
-    if (state.keyboard.left) {
-      state.camera.position.x += normalized.z * dt * SPEED;
-      state.camera.position.y += normalized.y * dt * SPEED;
-      state.camera.position.z += -normalized.x * dt * SPEED;
-    }
-
-    if (state.keyboard.right) {
-      state.camera.position.x -= normalized.z * dt * SPEED;
-      state.camera.position.y -= normalized.y * dt * SPEED;
-      state.camera.position.z -= -normalized.x * dt * SPEED;
-    }
-
-    if (state.keyboard.up) {
-      state.camera.position.x -= normalized.y * dt * SPEED;
-      state.camera.position.y -= -normalized.x * dt * SPEED;
-      state.camera.position.z -= normalized.z * dt * SPEED;
-    }
-
-    if (state.keyboard.down) {
-      state.camera.position.x += normalized.y * dt * SPEED;
-      state.camera.position.y += -normalized.x * dt * SPEED;
-      state.camera.position.z += normalized.z * dt * SPEED;
-    }
-  }
-
-  function setupKeyboardListener(audioCtx) {
-    document.addEventListener(
-      "keydown",
-      (e) => {
-        switch (e.key) {
-          case "Escape":
-            state.halt = !state.halt;
-            audioCtx.close();
-            break;
-          case "Shift":
-            state.keyboard.down = true;
-            break;
-          case " ":
-            state.keyboard.up = true;
-            break;
-          case "w":
-          case "W":
-            state.keyboard.forward = true;
-            break;
-          case "s":
-          case "S":
-            state.keyboard.back = true;
-            break;
-          case "a":
-          case "A":
-            state.keyboard.left = true;
-            break;
-          case "d":
-          case "D":
-            state.keyboard.right = true;
-            break;
-        }
-      },
-      true
-    );
-
-    document.addEventListener(
-      "keyup",
-      (e) => {
-        switch (e.key) {
-          case "Shift":
-            state.keyboard.down = false;
-            break;
-          case " ":
-            state.keyboard.up = false;
-            break;
-          case "w":
-          case "W":
-            state.keyboard.forward = false;
-            break;
-          case "s":
-          case "S":
-            state.keyboard.back = false;
-            break;
-          case "a":
-          case "A":
-            state.keyboard.left = false;
-            break;
-          case "d":
-          case "D":
-            state.keyboard.right = false;
-            break;
-        }
-      },
-      true
-    );
   }
 }

@@ -298,5 +298,5 @@ export var startAudio = () => {
   audio.loop = true;
   audio.start();
 
-  return { audioCtx, analyser };
+  return analyser;
 };
