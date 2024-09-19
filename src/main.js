@@ -2,18 +2,14 @@ import debug from "./debug.js";
 import fps from "./fps.js";
 
 const DEBUG = true;
-const FULLSCREEN = true;
 
 var canvas = document.createElement("canvas");
 canvas.style.position = "fixed";
 canvas.style.left = canvas.style.top = 0;
-// canvas.width = window.innerWidth;
-// canvas.height = window.innerHeight;
 
 import { loadAudio, startAudio } from "./soundbox.js";
 
 const state = {
-  epoch: 0,
   now: 0,
   audio: {
     offset: 0,
@@ -39,16 +35,19 @@ async function main() {
   }
 
   // Wait for a to let the browser to properly enter fullscreen.
-  if (FULLSCREEN) {
-    await document.documentElement.requestFullscreen();
-    await new Promise((r) => setTimeout(r, 1000));
-  }
+  await document.documentElement.requestFullscreen();
+  await new Promise((r) => setTimeout(r, 1000));
 
-  state.epoch = performance.now();
+  const renderWidth = 1700;
+  const zoom = window.innerWidth / renderWidth;
+  document.body.style.zoom = zoom;
+
+  const canvasWidth = (canvas.width = renderWidth);
+  const canvasHeight = (canvas.height = window.innerHeight / zoom + 1);
+  const epoch = performance.now();
 
   const analyser = startAudio();
-  analyser.fftSize = 1024;
-  const fftDataArray = new Uint8Array(analyser.frequencyBinCount);
+  const fftDataArray = new Uint8Array((analyser.fftSize = 1024));
 
   const adapter = await navigator.gpu.requestAdapter();
   const device = await adapter.requestDevice();
@@ -65,9 +64,6 @@ async function main() {
   const vertexShaderCode = DEBUG
     ? await fetch("src/shader/vertex.wgsl").then((res) => res.text())
     : MINIFIED_VERTEX_SHADER;
-
-  var canvasWidth = (canvas.width = window.innerWidth);
-  var canvasHeight = (canvas.height = window.innerHeight);
 
   // Textures
 
@@ -246,7 +242,7 @@ async function main() {
 
   function render() {
     // update();
-    const now = performance.now() - state.epoch;
+    const now = performance.now() - epoch;
 
     if (DEBUG) {
       const dt = now - state.now;
@@ -264,7 +260,7 @@ async function main() {
       canvasHeight - margin * 2
     );
 
-    maskTextureContext.font = `${canvasWidth / 17}px monospace`;
+    maskTextureContext.font = "100px monospace";
     maskTextureContext.fillStyle = "#000";
 
     const messages = [
@@ -275,7 +271,7 @@ async function main() {
       "",
       ":~$ ./greetings",
       "(papu)  pumpuli opossumi",
-      "BFlorry    ඞ    sampozki",
+      "BFlorry   sampozki   ඞ  ",
       "shiona   ninnnu  Pinqvin",
       "",
       "",
