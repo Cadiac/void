@@ -8,6 +8,7 @@ FULLSCREEN=true
 
 USE_SOINTU=false
 USE_BROTLI=true
+USE_PNG=true
 
 mkdir -p tmp
 mkdir -p entry
@@ -60,9 +61,10 @@ if [ "$AUDIO" = "true" ]; then
             cat tmp/bundle.min.js >> tmp/index.html
             printf '</script>' >> tmp/index.html
             
-            brotli -f -Z -o entry/index.html tmp/index.html
-            ruby tools/png/pnginator.rb tmp/bundle.min.js entry/index.png.html
-        else
+            brotli -f -Z -o entry/index.br.html tmp/index.html
+        fi
+
+        if [ "$USE_PNG" ]; then
             ruby tools/png/pnginator.rb tmp/bundle.min.js entry/index.html
         fi
     fi
@@ -71,5 +73,10 @@ else
 fi
 
 wc -c tmp/index.html
-wc -c entry/index.png.html
-wc -c entry/index.html
+if [ "$USE_PNG" ]; then
+    wc -c entry/index.html
+fi
+
+if [ "$USE_BROTLI" ]; then
+    wc -c entry/index.br.html
+fi

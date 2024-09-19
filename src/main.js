@@ -264,7 +264,7 @@ async function main() {
       canvasHeight - margin * 2
     );
 
-    maskTextureContext.font = "100px monospace";
+    maskTextureContext.font = `${canvasWidth / 17}px monospace`;
     maskTextureContext.fillStyle = "#000";
 
     const messages = [

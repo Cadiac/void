@@ -76,7 +76,9 @@ export const startSointu = () => {
   analyser.connect(audioCtx.destination);
   audio.connect(analyser);
 
-  audio.loop = true;
+  if (DEBUG) {
+    audio.loop = true;
+  }
   audio.start();
 
   return { audioCtx, analyser };

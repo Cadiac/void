@@ -39,7 +39,7 @@ var songMixBuf = new Int32Array(songNumWords);
 //--------------------------------------------------------------------------
 
 // Oscillators
-var osc_sin = (value) => Math.sin(value * 6.283184);
+var osc_sin = (value) => Math.sin(value * 6.28318);
 var osc_square = (value) => (value % 1 < 0.5 ? 1 : -1);
 
 // 174.61.. / 44100 = 0.003959503758 (F3)
@@ -147,11 +147,11 @@ var generate = () => {
         lfoFreq = 2 ** (instr.i[18] - 9) / rowLen,
         fxLFO = instr.i[19],
         fxFilter = instr.i[20],
-        fxFreq = (instr.i[21] * 43.23529 * 3.141592) / 44100,
+        fxFreq = (instr.i[21] * 135.82755) / 44100,
         q = 1 - instr.i[22] / 255,
         drive = instr.i[24] / 32,
         panAmt = instr.i[25] / 512,
-        panFreq = (6.283184 * 2 ** (instr.i[26] - 9)) / rowLen,
+        panFreq = (6.28318 * 2 ** (instr.i[26] - 9)) / rowLen,
         dlyAmt = instr.i[27] / 255,
         dly = (instr.i[28] * rowLen) & ~1; // Must be an even number
 
@@ -295,7 +295,9 @@ export var startAudio = () => {
   analyser.connect(audioCtx.destination);
   audio.connect(analyser);
 
-  audio.loop = true;
+  if (DEBUG) {
+    audio.loop = true;
+  }
   audio.start();
 
   return analyser;
