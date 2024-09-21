@@ -51,11 +51,11 @@ export default {
       // Instrument 1
       i: [
         0, // OSC1_WAVEFORM
-        255, // OSC1_VOL
+        128, // OSC1_VOL
         116, // OSC1_SEMI
         64, // OSC1_XENV
         0, // OSC2_WAVEFORM
-        255, // OSC2_VOL
+        128, // OSC2_VOL
         116, // OSC2_SEMI
         0, // OSC2_DETUNE
         64, // OSC2_XENV
