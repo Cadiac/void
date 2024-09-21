@@ -265,7 +265,7 @@ async function main() {
 
     const messages = [
       "",
-      ":~$ ./run.sh",
+      ":~$ ./void",
       "",
       "",
       "",

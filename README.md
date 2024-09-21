@@ -1,8 +1,8 @@
-# ASCII - Demohäsä 2024
+# Void Prompt - Demohäsä 2024
 
 ## Online version
 
-https://ascii.cadi.ac/
+https://void.cadi.ac/
 
 ## Running locally
 
