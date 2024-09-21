@@ -5,7 +5,6 @@ AUDIO=true
 TOUCH=false
 DEBUG=false
 
-USE_SOINTU=false
 USE_BROTLI=true
 USE_PNG=true
 
@@ -40,41 +39,26 @@ java -jar tools/closure-compiler/closure-compiler-v20231112.jar \
     --js_output_file tmp/bundle.min.js
 
 if [ "$AUDIO" = "true" ]; then
-    if [ "$USE_SOINTU" = "true" ]; then
-        sointu-compile -o tmp/ -arch=wasm audio/song.yml
+    if [ "$USE_BROTLI" ]; then
+        printf '...<script>' > tmp/index.br.html
+        cat tmp/bundle.min.js >> tmp/index.br.html
+        printf '</script>' >> tmp/index.br.html
+        
+        brotli -f -Z -o brotli/index.html tmp/index.br.html
+    fi
 
-        wat2wasm tmp/song.wat -o tmp/song.wasm
-
-        wasm-opt --enable-bulk-memory \
-            --enable-multivalue \
-            --strip-debug \
-            --disable-gc \
-            -O tmp/song.wasm \
-            -o tmp/song_optimized.wasm
-
-        ruby tools/png/pnginator.rb tmp/bundle.min.js tmp/song_optimized.wasm entry/index.html
-    else
-        if [ "$USE_BROTLI" ]; then
-            printf '...<script>' > tmp/index.html
-            cat tmp/bundle.min.js >> tmp/index.html
-            printf '</script>' >> tmp/index.html
-            
-            brotli -f -Z -o entry/index.br.html tmp/index.html
-        fi
-
-        if [ "$USE_PNG" ]; then
-            ruby tools/png/pnginator.rb tmp/bundle.min.js entry/index.html
-        fi
+    if [ "$USE_PNG" ]; then
+        ruby tools/png/pnginator.rb tmp/bundle.min.js entry/index.html
     fi
 else
     ruby tools/png/pnginator.rb tmp/bundle.min.js entry/index.html
 fi
 
-wc -c tmp/index.html
+wc -c tmp/bundle.min.js
 if [ "$USE_PNG" ]; then
     wc -c entry/index.html
 fi
 
 if [ "$USE_BROTLI" ]; then
-    wc -c entry/index.br.html
+    wc -c brotli/index.html
 fi

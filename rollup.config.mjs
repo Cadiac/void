@@ -1,7 +1,7 @@
 import replace from "@rollup/plugin-replace";
 
 export default {
-  input: "src/main.js",
+  input: "src/index.js",
   output: {
     file: "tmp/bundle.js",
     format: "es",
@@ -9,9 +9,13 @@ export default {
   },
   plugins: [
     replace({
+      // Feature flags. This plugin replacing these with booleans causes Google Closure Compiler to see
+      // code like `if (true === false)` and eliminates those branches completely from the final build.
       DEBUG: process.env.DEBUG === "true",
       AUDIO: process.env.AUDIO === "true",
       TOUCH: process.env.TOUCH === "true",
+
+      // Minified wgsl shaders produced by wgslminify
       MINIFIED_VERTEX_SHADER: "`" + process.env.MINIFIED_VERTEX_SHADER + "`",
       MINIFIED_RAYMARCH_SHADER:
         "`" + process.env.MINIFIED_RAYMARCH_SHADER + "`",
@@ -22,7 +26,9 @@ export default {
       MINIFIED_BLUR_SHADER: "`" + process.env.MINIFIED_BLUR_SHADER + "`",
       MINIFIED_BLOOM_SHADER: "`" + process.env.MINIFIED_BLOOM_SHADER + "`",
 
-      // Texture usage flags
+      // Texture usage flags. Numeric values help Google Closure Compiler
+      // to minify these further, but one day in future these might break if
+      // the values these enums map to were to somehow change as the standard matures.
       "GPUTextureUsage.COPY_SRC": 1 << 0,
       "GPUTextureUsage.COPY_DST": 1 << 1,
       "GPUTextureUsage.TEXTURE_BINDING": 1 << 2,

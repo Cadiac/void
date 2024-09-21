@@ -1,11 +1,8 @@
-// Song link, manually modified by rounding some values be less accurate to save some bits.
+// Song data, manually modified by rounding some values be less accurate to save some bits.
 // Also columns data has been simplified, as no changing effects are used.
 // https://sb.bitsnbites.eu/?data=U0JveA4C7dm_SsNQFAfgc5NUxMEKTgpCN0c7CA4uLs4OLj6Eo5sIQZFQKQXpK7j5CE59BV_Dh6jpP6uiiJuR7ws_cs69CZxkvS_bEZvRKVL7IVJZtqMbW2XUjlJknTKKcfa8OulTlhfvc1P17vr30ViXt73-oLnjx_Wg1x82ef7J_2_yBwAAAAAAAP_P-OKkTpxGsXK8P1vK1iM6szKfSillk9RbeRXVdKd6y8f-r1vO-_W9KfN_1wMAAAAAAPBb5SxXkQ7nK2n0GDu7-Vm-6JdJH179fFTTtMMbh00AAAAAAABE9GfpFmt7B3X51Io0qqJz3tooFo-kuUk9_OECAAAAAACAJnkF
 
-// Song data
-// This music has been exported by SoundBox
-
-var song = {
+export default {
   songData: [
     {
       // Instrument 0
@@ -268,5 +265,3 @@ var song = {
   endPattern: 22, // End pattern
   numChannels: 4, // Number of channels
 };
-
-export default song;

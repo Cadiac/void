@@ -65,6 +65,9 @@ async function main() {
     ? await fetch("src/shader/vertex.wgsl").then((res) => res.text())
     : MINIFIED_VERTEX_SHADER;
 
+  // Grouping similar code together saves quite a bit of space at the compression,
+  // even more than wrapping these to a helper function.
+
   // Textures
 
   const raymarchPassTexture = device.createTexture({
@@ -237,9 +240,6 @@ async function main() {
     { width: width, height: height }
   );
 
-  // Start the render loop
-  render();
-
   function render() {
     // update();
     const now = performance.now() - epoch;
@@ -288,17 +288,19 @@ async function main() {
       ":~$ exit",
     ];
 
-    const duration = 5000,
-      i = Math.floor(state.now / duration),
-      c = Math.floor((state.now - i * duration) / 100),
-      txt =
-        messages[i].slice(0, c) +
-        (Math.floor(state.now / 625) % 2 === 0 ? "█" : ""),
-      x = margin * 3,
-      y =
-        i > 1 ? (i == 18 ? canvasHeight / 2 : canvasHeight - margin * 4) : 200;
+    // Draw messages one character at a time, like they were typed out
+    const messageDuration = 5000;
+    const i = Math.floor(state.now / messageDuration);
+    const character = Math.floor((state.now - i * messageDuration) / 100);
 
-    maskTextureContext.fillText(txt, x, y);
+    const x = margin * 3;
+    const y =
+      i > 1 ? (i == 18 ? canvasHeight / 2 : canvasHeight - margin * 4) : 200;
+    const message =
+      messages[i].slice(0, character) +
+      (Math.floor(state.now / 625) % 2 === 0 ? "█" : "");
+
+    maskTextureContext.fillText(message, x, y);
 
     device.queue.copyExternalImageToTexture(
       { source: maskTextureContext.canvas },
@@ -373,4 +375,6 @@ async function main() {
 
     window.requestAnimationFrame(render);
   }
+
+  render();
 }

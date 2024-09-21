@@ -1,23 +1,43 @@
-fn sphere(pos: vec3f, radius: f32) -> f32 {
-    return length(pos) - radius;
-}
-
-fn opSubtraction(a: f32, b: f32) -> f32 {
-    return max(-a, b);
-}
-
-fn opRepeat(p: vec3f, s: vec3f) -> vec3f {
-    return p - s * round(p / s);
-}
+// The following functions and raymarching algorithms are derived from iq's
+// brilliant website, published under MIT license:
+// - https://iquilezles.org/articles/distfunctions/ - opUnion, opSubtraction, opRepeat, sdSphere, sdBox
+// - https://iquilezles.org/articles/raymarchingdf/ - rayMarching
+// - https://iquilezles.org/articles/normalsSDF/, Tetrahedron technique
+//
+// These functions were converted to WGSL and manually inlined (as wgslminifier is lacking support for this)
+// License of the original code:
+// 
+// The MIT License
+// Copyright © 2019 Inigo Quilez
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions: The above copyright
+// notice and this permission notice shall be included in all copies or
+// substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS",
+// WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+// TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+// FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
+// THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 fn scene(pos: vec3f) -> f32 {
     // Cube (20 x 20 x 20)
     let q = abs(pos) - vec3(20.0);
 
-    return min(opSubtraction(
-        sphere(opRepeat(pos, vec3f(4.5 + sin(uniforms.z))), 3.0),
-        length(max(max(max(q.x, 0.0), max(q.y, 0.0)), max(q.z, 0.0))) + min(max(q.x, max(q.y, q.z)), 0.0) // Cube
-    ), sphere(pos, 1.5 + 0.2 * uniforms.w));
+    // Repeated spheres every 4.5 units (opRepeat)
+    let s = vec3f(4.5 + sin(uniforms.z));
+
+    return min(                                                                                                 // opUnion
+        max(                                                                                                    // opSubttraction
+            -length(pos - s * round(pos / s)) + 3.0,                                                            // sdSphere
+            length(max(max(max(q.x, 0.0), max(q.y, 0.0)), max(q.z, 0.0))) + min(max(q.x, max(q.y, q.z)), 0.0)   // sdBox
+        ),
+        length(pos) - 1.5 - 0.2 * uniforms.w                                                                    // sdSphere
+    );
 }
 
 fn rayMarch(pos: vec3f, rayDir: vec3f) -> f32 {
@@ -43,7 +63,7 @@ fn rayMarch(pos: vec3f, rayDir: vec3f) -> f32 {
     return depth;
 }
 
-// Instead of this struct, just pass a vec4f
+// Originally the uniforms were passed as a struct, but just using a vec4f saves some space.
 // struct Uniforms {
 //     resolution: vec2f, // uniforms.xy
 //     time: f32,         // uniforms.z
@@ -65,7 +85,7 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
     let l = normalize(-camera);
     let s = normalize(cross(vec3(0.0, -1.0, 0.0), l));
     var dir = (mat4x4(
-        vec4(s, .0), vec4(cross(l, s), .0), vec4(-l, .0), vec4(.0, .0, .0, 1.)) *                                       // viewToWorld
+        vec4(s, .0), vec4(cross(l, s), .0), vec4(-l, .0), vec4(.0, .0, .0, 1.)) *                 // viewToWorld
         vec4(normalize(vec3(FragCoord.xy - uniforms.xy / 2.0, -(uniforms.y / 0.6))), 0.0)).xyz;   // viewDir
 
     let sunDir = normalize(vec3(1, 2, 3));
@@ -85,7 +105,7 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
             break;
         }
 
-        // Tetrahedron technique, https://iquilezles.org/articles/normalsSDF/, MIT
+        // Normals using tetrahedron technique
         const k = vec2(1, -1);
         let normal = normalize(
             k.xyy * scene(pos + k.xyy * 0.001) +
@@ -97,7 +117,7 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
         rayDist += dist;
 
 
-        let e = exp2(-rayDist * 0.05 * vec3(1.0));                                                  // Fog
+        let e = exp2(-rayDist * 0.05 * vec3(1.0));              // Fog
 
         var diffuse = vec3(0.5);
         if (length(pos) < 2) {
@@ -105,10 +125,9 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
         } 
 
         color = mix(color, (
-            vec3(0.1) +                                                                             // Ambient, TODO maybe remove?
-            diffuse * clamp(dot(sunDir, normal), 0.0, 1.0)                                          // Diffuse
-            // vec3(0.8) * pow(clamp(dot(reflect(sunDir, normal), dir), 0.0, 1.0), 10.0)            // Specular
-        ) * e + (1.0 - e) * vec3(1.0), reflection);                                                 // Fog color
+            vec3(0.1) +                                         // Ambient
+            diffuse * clamp(dot(sunDir, normal), 0.0, 1.0)      // Diffuse
+        ) * e + (1.0 - e) * vec3(1.0), reflection);             // Fog color
 
         reflection *= 0.5;
         if (length(pos) < 2) {
@@ -120,7 +139,7 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
         pos = pos + dist * dir;
     }
 
-    // Blank "shell" screen at the beginning/end
+    // Blank background for the "shell" screen at the beginning/end
     if uniforms.z < 1 || uniforms.z > 10.8 {
         color = vec3(0.6, 0.55, 0.5);
     }

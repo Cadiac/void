@@ -259,6 +259,7 @@ export var loadAudio = (canvas, init) => {
   // Audio can't run without an user initiated event.
   if (TOUCH) {
     // Mobile support needs a touch handler.
+    // But as of now, WebGPU mobile support is almost non existant.
     canvas.ontouchend = canvas.onclick = init;
   } else {
     canvas.onclick = init;

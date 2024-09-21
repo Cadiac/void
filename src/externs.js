@@ -38,12 +38,12 @@ dat.GUI.prototype.addColor = function (object, property) {};
 
 // For sointu audio WebAssembly
 const f = [];
-const obj = {};
-obj.exports = {};
-obj.exports.m = {};
-obj.exports.m.buffer;
-obj.exports.s;
-obj.exports.l;
+// const obj = {};
+// obj.exports = {};
+// obj.exports.m = {};
+// obj.exports.m.buffer;
+// obj.exports.s;
+// obj.exports.l;
 
 // --- WebGPU support ---
 

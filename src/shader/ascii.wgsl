@@ -28,16 +28,17 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
 
     // Idea based on Acerola's ASCII filter from video "I Tried Turning Games Into Text",
     // https://www.youtube.com/watch?v=gg40RWiaHRY
-    // I recommend you to watch this. This shader implement similar edge detection and draws
-    // ASCII characters from the texture that's created by drawing those characters on canvas.
+    // I highly recommend you to watch this, as it gives a pretty good idea on how this whole ASCII effect works,
+    // and the idea for the edge detection is based on the same approach as on that video.
+    // The sobel shader implements the edge and direction detection, and here we read the direction from that texture.
     if sobel.y > 0 { // isEdge
         // let direction = i32(round(sobel.x * 8.0));
 
         // Direction from the compute shader maps to these edges:
-        // 0   |
-        // 8   /
-        // 16  -
-        // 24  \
+        // 0:  "|"
+        // 8:  "/"
+        // 16: "-"
+        // 24: "\"
 
         // let edge = (direction % 4) * 8;
 
