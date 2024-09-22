@@ -119,7 +119,7 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
 
         let e = exp2(-rayDist * 0.05 * vec3(1.0));              // Fog
 
-        var diffuse = vec3(0.5);
+        var diffuse = vec3(0.7, 0.55, 0.5);
         if (length(pos) < 2) {
             diffuse = uniforms.w * 2 * vec3(1.0, 0.6, 0.0);
         } 

@@ -2,7 +2,7 @@
 @group(0) @binding(1) var sobelTexture: texture_2d<f32>;
 @group(0) @binding(2) var maskTexture: texture_2d<f32>;
 @group(0) @binding(3) var asciiTexture: texture_2d<f32>;
-@group(0) @binding(4) var<uniform> beat: f32;
+@group(0) @binding(4) var<uniform> uniforms: vec2f;
 
 fn colorBurn(base: f32, blend: f32) -> f32 {
     if blend == 0.0 {
@@ -24,7 +24,7 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
     // "x" carries the direction, "y" tells if this tile is an edge tile.
     let sobel = textureLoad(sobelTexture, vec2i(FragCoord.xy), 0);
 
-    var base = beat * color;
+    var base = uniforms.x * color;
 
     // Idea based on Acerola's ASCII filter from video "I Tried Turning Games Into Text",
     // https://www.youtube.com/watch?v=gg40RWiaHRY
@@ -64,12 +64,12 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
         // let offset = i32(min(quantized, 0.9) * 80);
         // let asciiPixel = textureLoad(asciiTexture, vec2i(FragCoord.xy % 8) + vec2i(offset, 0), 0);
 
-        // base += asciiPixel * color * uniforms.fill;
+        // base += asciiPixel * color * cos(uniforms.time);
 
         base += textureLoad(asciiTexture,
             vec2i(FragCoord.xy % 8) +
             vec2i(i32(min(floor((0.2 * color.x + 0.7 * color.y + 0.1 * color.z) * 10) / 10, 0.9) * 80), 0), 0
-        ) * color * 0.5; // Fill
+        ) * color * cos(uniforms.y); // Fill
     }
 
     return vec4(

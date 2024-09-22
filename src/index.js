@@ -2,6 +2,7 @@ import debug from "./debug.js";
 import fps from "./fps.js";
 
 const DEBUG = true;
+const FULLSCREEN = false;
 
 var canvas = document.createElement("canvas");
 canvas.style.position = "fixed";
@@ -34,9 +35,11 @@ async function main() {
     debug.setup(state);
   }
 
-  // Wait for a to let the browser to properly enter fullscreen.
-  await document.documentElement.requestFullscreen();
-  await new Promise((r) => setTimeout(r, 1000));
+  if (FULLSCREEN) {
+    // Wait for a to let the browser to properly enter fullscreen.
+    await document.documentElement.requestFullscreen();
+    await new Promise((r) => setTimeout(r, 1000));
+  }
 
   const renderWidth = 1700;
   const zoom = window.innerWidth / renderWidth;
@@ -114,7 +117,7 @@ async function main() {
   });
 
   const asciiUniformsBuffer = device.createBuffer({
-    size: 4,
+    size: 2 * 4,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
@@ -329,7 +332,10 @@ async function main() {
     device.queue.writeBuffer(
       asciiUniformsBuffer,
       0,
-      new Float32Array([fftDataArray[state.audio.offset] / 255])
+      new Float32Array([
+        fftDataArray[state.audio.offset] / 255,
+        state.now / 10000,
+      ])
     );
 
     var commandEncoder = device.createCommandEncoder();

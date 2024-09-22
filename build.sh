@@ -4,6 +4,7 @@ set -e
 AUDIO=true
 TOUCH=false
 DEBUG=false
+FULLSCREEN=true
 
 USE_BROTLI=true
 USE_PNG=true
@@ -19,6 +20,7 @@ wgslminify -e f src/shader/ascii.wgsl > tmp/ascii.min.wgsl
 DEBUG=$DEBUG \
     AUDIO=$AUDIO \
     TOUCH=$TOUCH \
+    FULLSCREEN=$FULLSCREEN \
     MINIFIED_VERTEX_SHADER=$(cat tmp/vertex.min.wgsl) \
     MINIFIED_RAYMARCH_SHADER=$(cat tmp/raymarch.min.wgsl) \
     MINIFIED_SOBEL_SHADER=$(cat tmp/sobel.min.wgsl) \
