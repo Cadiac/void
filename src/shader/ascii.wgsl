@@ -69,7 +69,7 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
         base += textureLoad(asciiTexture,
             vec2i(FragCoord.xy % 8) +
             vec2i(i32(min(floor((0.2 * color.x + 0.7 * color.y + 0.1 * color.z) * 10) / 10, 0.9) * 80), 0), 0
-        ) * color * cos(uniforms.y); // Fill
+        ) * color * cos(max(1, uniforms.y) - 0.5); // Fill
     }
 
     return vec4(

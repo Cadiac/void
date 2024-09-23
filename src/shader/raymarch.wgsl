@@ -81,6 +81,7 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
     // let s = normalize(cross(normalize(vec3(0.0, -1.0, 0.0)), f));
     // let l = normalize(uniforms.lookAt - uniforms.camera);
     let camera = vec3f(7 * sin(uniforms.z), 0, 7 * cos(uniforms.z));
+    // let camera = vec3f(5 + uniforms.z, 0, 0);
 
     let l = normalize(-camera);
     let s = normalize(cross(vec3(0.0, -1.0, 0.0), l));

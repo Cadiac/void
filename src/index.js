@@ -41,7 +41,7 @@ async function main() {
     await new Promise((r) => setTimeout(r, 1000));
   }
 
-  const renderWidth = 1700;
+  const renderWidth = 1600;
   const zoom = window.innerWidth / renderWidth;
   document.body.style.zoom = zoom;
 
@@ -266,42 +266,35 @@ async function main() {
     maskTextureContext.font = "100px monospace";
     maskTextureContext.fillStyle = "#000";
 
+    // prettier-ignore
     const messages = [
-      "",
-      ":~$ ./void",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      ":~$ ./greetings",
-      "(papu)  pumpuli opossumi",
-      "BFlorry   sampozki   ඞ  ",
-      "shiona   ninnnu  Pinqvin",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "  Cadiac @ Demohäsä 2024",
-      "",
-      "",
-      ":~$ exit",
+      "",                         // 00:00
+      ":~$ ./void",               // 00:05
+      "",                         // 00:15
+      "",                         // 00:25
+      ":~$ ./greetings",          // 00:35
+      "papu  pumpuli opossumi",   // 00:45
+      "BFlorry   ඞ   sampozki",   // 00:55
+      "shiona ninnnu  Pinqvin",   // 01:05
+      "",                         // 01:15
+      "Cadiac @ Demohäsä 2024",   // 01:25
+      "",                         // 01:35
+      ":~$ exit",                 // 01:45
     ];
 
     // Draw messages one character at a time, like they were typed out
-    const messageDuration = 5000;
-    const i = Math.floor(state.now / messageDuration);
-    const character = Math.floor((state.now - i * messageDuration) / 100);
+    const messageDuration = 10000;
+    const i = Math.floor((state.now + 5000) / messageDuration);
+    const character = Math.floor(
+      (state.now + 5000 - i * messageDuration) / 100
+    );
 
     const x = margin * 3;
     const y =
-      i > 1 ? (i == 18 ? canvasHeight / 2 : canvasHeight - margin * 4) : 200;
+      i > 1 ? (i == 9 ? canvasHeight / 2 : canvasHeight - margin * 4) : 200;
     const message =
       messages[i].slice(0, character) +
-      (Math.floor(state.now / 625) % 2 === 0 ? "█" : "");
+      (Math.floor((state.now + 5000) / 625) % 2 === 0 ? "█" : "");
 
     maskTextureContext.fillText(message, x, y);
 
