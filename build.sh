@@ -25,9 +25,6 @@ DEBUG=$DEBUG \
     MINIFIED_RAYMARCH_SHADER=$(cat tmp/raymarch.min.wgsl) \
     MINIFIED_SOBEL_SHADER=$(cat tmp/sobel.min.wgsl) \
     MINIFIED_ASCII_SHADER=$(cat tmp/ascii.min.wgsl) \
-    MINIFIED_BRIGHTNESS_SHADER=$(cat tmp/brightness.min.wgsl) \
-    MINIFIED_BLUR_SHADER=$(cat tmp/blur.min.wgsl) \
-    MINIFIED_BLOOM_SHADER=$(cat tmp/bloom.min.wgsl) \
     npx rollup --config rollup.config.mjs
 
 java -jar tools/closure-compiler/closure-compiler-v20231112.jar \

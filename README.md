@@ -1,8 +1,32 @@
-# Void Prompt - Demohäsä 2024
+# Void - 4k intro
+
+![Screenshot](https://github.com/Cadiac/void/blob/main/entry/screenshot.png)
 
 ## Online version
 
 https://void.cadi.ac/
+
+## About
+
+First released at Demohäsä 2024.
+
+Idea for the ascii shader with edge detection was based on Acerola's recent video ["I Tried Turning Games Into Text"](https://www.youtube.com/watch?v=gg40RWiaHRY), which explained the implementation for this shader effect by detecting edges and their directions using a [Sobel Filter](https://en.wikipedia.org/wiki/Sobel_operator).
+
+My goal was mainly to test out the current state of WebGPU and use Compute Shaders that it supports.
+
+- JavaScript
+  - Creating an ASCII texture by drawing text on a canvas
+- WebGPU
+  - Using raymarching to draw a simple scene
+  - Compute shader for edge detection & finding most common edge directions within 8x8 areas
+  - Final render pass drawing the scene using characters from the ASCII texture based on luminance & edge data
+- [SoundBox](https://gitlab.com/mbitsnbites/soundbox)
+- [wgslminify](https://github.com/mgnauck/wgslminify)
+- [Google Closure Compiler](https://mvnrepository.com/artifact/com.google.javascript/closure-compiler/v20231112)
+- [Rollup](https://rollupjs.org)
+- [pnginator](https://gist.github.com/gasman/2560551)
+
+This is my third 4k intro.
 
 ## Running locally
 

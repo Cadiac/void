@@ -273,9 +273,9 @@ async function main() {
       "",                         // 00:15
       "",                         // 00:25
       ":~$ ./greetings",          // 00:35
-      "papu  pumpuli opossumi",   // 00:45
-      "BFlorry   ඞ   sampozki",   // 00:55
-      "shiona ninnnu  Pinqvin",   // 01:05
+      " papu pumpuli opossumi",   // 00:45
+      " BFlorry   ඞ   sampozki",  // 00:55
+      " shiona ninnnu Pinqvin",   // 01:05
       "",                         // 01:15
       "Cadiac @ Demohäsä 2024",   // 01:25
       "",                         // 01:35
