@@ -1,6 +1,6 @@
 # Void - 4k intro
 
-![Screenshot](https://github.com/Cadiac/void/blob/main/entry/screenshot.png)
+![Screenshot](https://github.com/Cadiac/void/blob/main/screenshot.png)
 
 ## Online version
 
@@ -12,7 +12,7 @@ First released at Demohäsä 2024.
 
 Idea for the ascii shader with edge detection was based on Acerola's recent video ["I Tried Turning Games Into Text"](https://www.youtube.com/watch?v=gg40RWiaHRY), which explained the implementation for this shader effect by detecting edges and their directions using a [Sobel Filter](https://en.wikipedia.org/wiki/Sobel_operator).
 
-My goal was mainly to test out the current state of WebGPU and use Compute Shaders that it supports.
+My goal was to test out the current state of WebGPU and use a compute shader for something.
 
 - JavaScript
   - Creating an ASCII texture by drawing text on a canvas
