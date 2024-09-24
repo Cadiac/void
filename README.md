@@ -26,13 +26,11 @@ My goal was to test out the current state of WebGPU and use a compute shader for
 - [Rollup](https://rollupjs.org)
 - [pnginator](https://gist.github.com/gasman/2560551)
 
-This is my third 4k intro.
-
 ## Running locally
 
-Open `entry/index.html` in Google Chrome or other Chromium based browser. A fairly recent version of Chrome is required, tested on Chrome v127.0.6533.120, as WebGPU support is still experimental.
+Open `entry/index.html` in Google Chrome or other Chromium based browser. A fairly recent version of Chrome is required, tested on `Chrome v127.0.6533.120`, as WebGPU support is still in experimental state.
 
-To be able to unpack the PNG compressed demo you need to bypass CORS-security settings, that block reading the canvas values on file:// origin. You can do this either by passing `--disable-web-security` flag to Chrome on startup, or by running a local web server that serves the file from `localhost` origin which bypasses the need for CORS security settings override.
+To be able to unpack the PNG compressed demo you need to bypass CORS-security settings that block reading the canvas values on file:// origin. You can do this either by passing `--disable-web-security` flag to Chrome on startup, or by running a local web server that serves the file from `localhost` origin which bypasses the need for CORS security settings override.
 
 To start up a minimal python3 server to host the entry run
 
@@ -40,7 +38,7 @@ To start up a minimal python3 server to host the entry run
 $ python3 -m http.server
 ```
 
-and open http://localhost:8000/entry/index.html on the browser.
+at the root of the project and open http://localhost:8000/entry/index.html on the browser.
 
 On windows, to temporarily disable CORS-security settings you can start Chrome temporarily with:
 

@@ -247,6 +247,10 @@ async function main() {
     // update();
     const now = performance.now() - epoch;
 
+    if (now > 110000) {
+      return;
+    }
+
     if (DEBUG) {
       const dt = now - state.now;
       fps.update(dt);
@@ -271,11 +275,11 @@ async function main() {
       "",                         // 00:00
       ":~$ ./void",               // 00:05
       "",                         // 00:15
-      "",                         // 00:25
-      ":~$ ./greetings",          // 00:35
-      " papu pumpuli opossumi",   // 00:45
-      " BFlorry   ඞ   sampozki",  // 00:55
-      " shiona ninnnu Pinqvin",   // 01:05
+      ":~$ ./greetings",          // 00:25
+      " papu pumpuli opossumi",   // 00:35
+      "  BFlorry  ඞ  sampozki",   // 00:45
+      " shiona ninnnu Pinqvin",   // 00:55
+      " Instanssi    TiTe <3 ",   // 01:05
       "",                         // 01:15
       "Cadiac @ Demohäsä 2024",   // 01:25
       "",                         // 01:35
