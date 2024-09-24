@@ -1,0 +1,55 @@
+ 
+                        ███████     ████    ████   █████   ████     ██████ 
+                        █ ████ █  █    ▓█   █   █   █ █   █   █    █ ████ █
+                       █░█     ▒█ █ ████ █  █ █  █  █░█  █ ███ █   █░█    ▒█
+                       █░█       ░█ █  █ █  █░█ ░█  █░█  █░█  █ █  █░█      
+                       █▒█   ░▒█░▒█░████░█░░█░█░░█  █▒█ ░█░████░█ ▒█▒█▒  ░▒█
+                      ░▓███████▓ ▓███ ▓███▓ █████▓ ▓███▓▒██▓░ ███▓ ▓███████▓░
+                                                                         2024
+
+    /~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+    | Entry name: void                                                                      |
+    | Party: Demohässäkkä 2024                                                              |
+    | Compo: Anything goes (4K intro)                                                       |
+    | Code & Music: Cadiac                                                                  |
+    | Tools used:                                                                           |
+    | - JavaScript                                                                          |
+    | - WebGPU                                                                              |
+    | - SoundBox (https://gitlab.com/mbitsnbites/soundbox)                                  |
+    | - wgslminify (https://github.com/mgnauck/wgslminify)                                  |
+    | - Google Closure Compiler                                                             |
+    | (https://mvnrepository.com/artifact/com.google.javascript/closure-compiler/v20231112) |
+    | - Rollup (https://rollupjs.org)                                                       |
+    | - pnginator (https://gist.github.com/gasman/2560551)                                  |
+    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/
+
+4K intro, first released at Demohässäkkä 2024.
+Source code and a longer README.md can be found from https://github.com/Cadiac/void.
+At the time of release WebGPU only works on modern Chrome (tested on v127.0.6533.120).
+
+Online version: https://void.cadi.ac/
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+How to run:
+
+Host the file from a local server on localhost, for instance run
+
+$ python3 -m http.server
+
+and open http://localhost:8000/index.html on your browser. This bypasses
+the need for CORS-security settings override.
+
+Alternative is to open index.html directly on Chrome with the CORS-security settings temporarily disabled.
+
+You can do this with Chrome startup flags, for instance on Windows:
+
+"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+    --disable-web-security --user-data-dir=[some directory]
+
+Click near the "Click!" text to start the demo. It should automatically enter full screen mode and
+start after 2 second delay, and stop once the demo is complete.
+
+Note that as WebGPU support is still experimental this demo unfortunately won't run on Firefox or Safari.
+
+Thanks Acerola for showcasing this effect!

@@ -1,8 +1,8 @@
-# Void - 4k intro
+# void - 4K intro
 
 ![Screenshot](https://github.com/Cadiac/void/blob/main/screenshot.png)
 
-## Online version
+## Online version (4094 bytes)
 
 https://void.cadi.ac/
 
