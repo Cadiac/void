@@ -2,6 +2,11 @@
 @group(0) @binding(1) var sobelTexture: texture_2d<f32>;
 @group(0) @binding(2) var maskTexture: texture_2d<f32>;
 @group(0) @binding(3) var asciiTexture: texture_2d<f32>;
+
+// struct Uniforms {
+//     beat: f32,         // uniforms.x
+//     time: f32,         // uniforms.y
+// };
 @group(0) @binding(4) var<uniform> uniforms: vec2f;
 
 fn colorBurn(base: f32, blend: f32) -> f32 {
@@ -24,7 +29,8 @@ fn f(@builtin(position) FragCoord: vec4f) -> @location(0) vec4f {
     // "x" carries the direction, "y" tells if this tile is an edge tile.
     let sobel = textureLoad(sobelTexture, vec2i(FragCoord.xy), 0);
 
-    var base = uniforms.x * color;
+    // Reduce flickering by clamping the color multiplier
+    var base = max(0.1, uniforms.x) * color;
 
     // Idea based on Acerola's ASCII filter from video "I Tried Turning Games Into Text",
     // https://www.youtube.com/watch?v=gg40RWiaHRY

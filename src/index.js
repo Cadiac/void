@@ -279,7 +279,7 @@ async function main() {
       " papu pumpuli opossumi",   // 00:35
       "  BFlorry  ඞ  sampozki",   // 00:45
       " shiona ninnnu Pinqvin",   // 00:55
-      " Instanssi    TiTe <3 ",   // 01:05
+      " Instanssi    TiTe <3",    // 01:05
       "",                         // 01:15
       "Cadiac @ Demohäsä 2024",   // 01:25
       "",                         // 01:35
