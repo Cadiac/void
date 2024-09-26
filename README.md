@@ -2,7 +2,7 @@
 
 ![Screenshot](https://github.com/Cadiac/void/blob/main/screenshot.png)
 
-## Online version (4094 bytes)
+## Online version (4096 bytes)
 
 https://void.cadi.ac/
 
